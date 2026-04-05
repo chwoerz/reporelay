@@ -43,16 +43,16 @@ Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, a
 | **Chunk**   | Symbol-Aware Chunking      | Respects function boundaries with overlap windows — never cuts a symbol in half                 |
 
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="38" alt="TypeScript"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg" width="38" alt="JavaScript"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" width="38" alt="Python"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/go/go-original-wordmark.svg" width="38" alt="Go"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/java/java-original.svg" width="38" alt="Java"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kotlin/kotlin-original.svg" width="38" alt="Kotlin"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/rust/rust-original.svg" width="38" alt="Rust"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/c/c-original.svg" width="38" alt="C"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cplusplus/cplusplus-original.svg" width="38" alt="C++"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/markdown/markdown-original.svg" width="38" alt="Markdown"/>
+  <img src="assets/icons/typescript-original.svg" width="38" alt="TypeScript"/>&nbsp;&nbsp;
+  <img src="assets/icons/javascript-original.svg" width="38" alt="JavaScript"/>&nbsp;&nbsp;
+  <img src="assets/icons/python-original.svg" width="38" alt="Python"/>&nbsp;&nbsp;
+  <img src="assets/icons/go-original-wordmark.svg" width="38" alt="Go"/>&nbsp;&nbsp;
+  <img src="assets/icons/java-original.svg" width="38" alt="Java"/>&nbsp;&nbsp;
+  <img src="assets/icons/kotlin-original.svg" width="38" alt="Kotlin"/>&nbsp;&nbsp;
+  <img src="assets/icons/rust-original.svg" width="38" alt="Rust"/>&nbsp;&nbsp;
+  <img src="assets/icons/c-original.svg" width="38" alt="C"/>&nbsp;&nbsp;
+  <img src="assets/icons/cplusplus-original.svg" width="38" alt="C++"/>&nbsp;&nbsp;
+  <img src="assets/icons/markdown-original.svg" width="38" alt="Markdown"/>
 </p>
 
 ---
@@ -181,12 +181,12 @@ Integration tests use real ParadeDB containers via [Testcontainers](https://test
 ## Tech Stack
 
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="34" alt="TypeScript"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg" width="34" alt="Node.js"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/fastify/fastify-original.svg" width="34" alt="Fastify"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg" width="34" alt="Postgres"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/angular/angular-original.svg" width="34" alt="Angular"/>&nbsp;&nbsp;
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg" width="34" alt="Docker"/>
+  <img src="assets/icons/typescript-original.svg" width="34" alt="TypeScript"/>&nbsp;&nbsp;
+  <img src="assets/icons/nodejs-original.svg" width="34" alt="Node.js"/>&nbsp;&nbsp;
+  <img src="assets/icons/fastify-original.svg" width="34" alt="Fastify"/>&nbsp;&nbsp;
+  <img src="assets/icons/postgresql-original.svg" width="34" alt="Postgres"/>&nbsp;&nbsp;
+  <img src="assets/icons/angular-original.svg" width="34" alt="Angular"/>&nbsp;&nbsp;
+  <img src="assets/icons/docker-original.svg" width="34" alt="Docker"/>
 </p>
 
 TypeScript (ESM, strict) / Node.js 22+ / Fastify 5 / Drizzle ORM / ParadeDB (BM25 + pgvector) / pg-boss / tree-sitter / MCP SDK / Angular 21 / Vitest + Testcontainers / Docker
