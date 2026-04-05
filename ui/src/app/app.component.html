@@ -1,0 +1,54 @@
+<div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a routerLink="/" class="brand">
+        <span class="mi brand-icon">hub</span>
+        <span class="nav-label">RepoRelay</span>
+      </a>
+      <button class="sidebar-toggle" (click)="toggleSidebar()">
+        <span class="mi">{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</span>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+        <span class="mi">folder</span>
+        <span class="nav-label">Repositories</span>
+      </a>
+      <a routerLink="/search" routerLinkActive="active" class="nav-item">
+        <span class="mi">search</span>
+        <span class="nav-label">Search</span>
+      </a>
+    </nav>
+
+    <button class="search-trigger" (click)="openCommandPalette()">
+      <span class="mi">search</span>
+      <span class="nav-label trigger-text">Search...</span>
+      <kbd class="nav-label trigger-kbd">{{ isMac ? '⌘' : 'Ctrl' }}K</kbd>
+    </button>
+
+    @if (repos().length > 0) {
+      <div class="sidebar-repos">
+        <div class="section-label nav-label">Repos</div>
+        @for (repo of repos(); track repo.name) {
+          <a [routerLink]="'/' + repo.name" routerLinkActive="active" class="repo-item">
+            <span class="repo-dot"
+              [class.dot-indexing]="isIndexing(repo)"
+              [class.dot-error]="isError(repo)"
+              [class.dot-ready]="isReady(repo)"></span>
+            <span class="nav-label">{{ repo.name }}</span>
+          </a>
+        }
+      </div>
+    }
+  </aside>
+
+  <main>
+    <router-outlet />
+  </main>
+</div>
+
+<app-command-palette
+  [open]="commandPaletteOpen()"
+  [repos]="repos()"
+  (closed)="closeCommandPalette()" />

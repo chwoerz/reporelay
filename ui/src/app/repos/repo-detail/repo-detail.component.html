@@ -1,0 +1,160 @@
+<a routerLink="/" class="back-link">
+  <span class="mi back-icon">arrow_back</span> Back
+</a>
+
+@if (repo.isLoading() && !repo.hasValue()) {
+  <div class="spinner-container">
+    <span class="spinner spinner-lg"></span>
+  </div>
+}
+
+@if (repo.error()) {
+  <p class="error">Repository not found.</p>
+}
+
+@if (repo.value(); as r) {
+  <h2>{{ r.name }}</h2>
+  <dl>
+    <dt>Default branch</dt>
+    <dd>{{ r.defaultBranch }}</dd>
+    @if (r.localPath) {
+      <dt>Local path</dt>
+      <dd>{{ r.localPath }}</dd>
+    }
+    @if (r.remoteUrl) {
+      <dt>Remote URL</dt>
+      <dd>{{ r.remoteUrl }}</dd>
+      <dt>Authentication</dt>
+      <dd>
+        @if (r.tokenConfigured) {
+          <span class="auth-status auth-ok">
+            <span class="mi auth-icon">vpn_key</span> Token configured
+          </span>
+        } @else {
+          <span class="auth-status auth-missing">
+            <span class="mi auth-icon">vpn_key_off</span> No token &mdash; set GIT_TOKEN_&lt;HOST&gt; in .env
+          </span>
+        }
+      </dd>
+    }
+  </dl>
+
+  <!-- Glob patterns (repo-level setting) -->
+  <div class="glob-settings">
+    <label class="glob-label">Glob patterns</label>
+    <div class="glob-row">
+      <input
+        class="input glob-field"
+        placeholder="e.g. src/**/*.ts,!**/vendor/**"
+        [value]="globPatterns()"
+        (input)="globPatterns.set(asValue($event))"
+      />
+      <button class="btn btn-outline btn-sm" (click)="saveGlobPatterns()" [disabled]="globSaving()">
+        Save
+      </button>
+      @if (globMessage()) {
+        <span class="glob-message">{{ globMessage() }}</span>
+      }
+    </div>
+    <p class="glob-hint">Comma-separated glob patterns to filter indexed files. Leave empty to index all files.</p>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="quick-actions">
+    <a class="btn btn-outline" [routerLink]="['/', r.name, 'context']">
+      <span class="mi">psychology</span> Context Builder
+    </a>
+  </div>
+
+  <!-- Sync form -->
+  @if (r.mirrorStatus === 'cloning') {
+    <div class="cloning-detail-banner">
+      <span class="spinner spinner-sm spinner-cyan"></span>
+      <span>Cloning mirror… ref picker will be available once cloning completes.</span>
+    </div>
+  } @else if (r.mirrorStatus === 'error') {
+    <p class="error">Mirror sync failed: {{ r.mirrorError }}</p>
+  } @else {
+    <form (submit)="sync($event)" class="sync-form">
+      @if (gitRefs.value(); as refs) {
+        <app-ref-picker
+          [gitRefs]="refs"
+          placeholder="Search branch or tag…"
+          (refSelected)="syncRef.set($event)"
+        />
+      } @else {
+        <input class="input" placeholder="ref to index (e.g. v1.0.0)" [value]="syncRef()"
+               (input)="syncRef.set(asValue($event))"/>
+      }
+      <button class="btn btn-primary" type="submit" [disabled]="!syncRef()">
+        <span class="mi">sync</span> Sync
+      </button>
+    </form>
+  }
+
+  @if (message()) {
+    <p [class]="messageIsError() ? 'error' : 'success'">{{ message() }}</p>
+  }
+
+  <h3>Indexed refs</h3>
+
+  <!-- Progress cards for refs being synced that haven't appeared in the table yet -->
+  @for (p of pendingProgress(); track p.ref) {
+    <app-progress-card [progress]="p" [showRefName]="true" [pending]="true" />
+  }
+
+  @if (r.refs.length === 0 && pendingProgress().length === 0) {
+    <p class="empty">No indexed refs yet. Use the ref picker above to select a branch or tag to index.</p>
+  } @else if (r.refs.length > 0) {
+    <table class="data-table refs-table">
+      <thead>
+        <tr>
+          <th>Ref</th>
+          <th>Stage</th>
+          <th>Commit</th>
+          <th>Actions</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ref of r.refs; track ref.ref) {
+          <tr [class.row-indexing]="isActiveStage(ref.stage)">
+            <td>{{ ref.ref }}</td>
+            <td>
+              <span class="chip stage-chip" [class]="'stage-' + ref.stage">
+                {{ ref.stage }}
+              </span>
+            </td>
+            <td class="mono">{{ ref.commitSha.slice(0, 8) }}</td>
+            <td class="ref-actions">
+              @if (ref.stage === 'ready') {
+                <a class="btn btn-ghost" [routerLink]="['/', r.name, ref.ref, 'browse']">Browse</a>
+                <a class="btn btn-ghost" [routerLink]="['/', r.name, ref.ref, 'symbols']">Symbols</a>
+              }
+            </td>
+            <td>
+              <button class="btn-icon warn" (click)="deleteRef(ref.ref)" aria-label="Delete ref">
+                <span class="mi">delete</span>
+              </button>
+            </td>
+          </tr>
+          @if (ref.stage !== 'ready' && progressFor(ref.ref); as p) {
+            <tr class="progress-detail-row">
+              <td colspan="5" class="progress-detail-cell">
+                <app-progress-card [progress]="p" />
+              </td>
+            </tr>
+          }
+          @if (ref.stage === 'error' && ref.indexingError) {
+            <tr class="error-detail-row">
+              <td colspan="5" class="error-detail-cell">
+                <span class="mi error-detail-icon">error</span>
+                <span class="error-detail-text">{{ ref.indexingError }}</span>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+}

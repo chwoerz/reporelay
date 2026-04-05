@@ -1,0 +1,901 @@
+openapi: 3.1.0
+info:
+  title: RepoRelay API
+  description: REST API for the RepoRelay code context engine.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+paths:
+  # ── Health ──
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [system]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ── Git Credentials ──
+  /api/git-credentials/hosts:
+    get:
+      operationId: getGitCredentialHosts
+      summary: Configured credential host suffixes
+      tags: [git-credentials]
+      responses:
+        "200":
+          description: List of normalized host suffixes with configured GIT_TOKEN_* env vars
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  # ── Repos ──
+  /api/repos:
+    get:
+      operationId: listRepos
+      summary: List all repositories and indexed refs
+      tags: [repos]
+      responses:
+        "200":
+          description: Array of repos with refs and mirror status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Repo"
+    post:
+      operationId: createRepo
+      summary: Register a repository
+      tags: [repos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRepoBody"
+      responses:
+        "201":
+          description: Repository created. Mirror clone starts in background.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Repository with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/repos/{name}:
+    get:
+      operationId: getRepo
+      summary: Repository details and indexing stats
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      responses:
+        "200":
+          description: Repo details with refs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteRepo
+      summary: Delete a repository and all indexed data
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      responses:
+        "204":
+          description: Repository deleted
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateRepo
+      summary: Update repository settings (e.g. glob patterns)
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRepoBody"
+      responses:
+        "200":
+          description: Updated repository
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/repos/{name}/git-refs:
+    get:
+      operationId: getGitRefs
+      summary: Branches and tags from the git mirror
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      responses:
+        "200":
+          description: Branches and tags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GitRefs"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Config not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/repos/{name}/sync:
+    post:
+      operationId: syncRepo
+      summary: Enqueue indexing for a ref
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncBody"
+      responses:
+        "202":
+          description: Indexing job enqueued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Job queue not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/repos/{name}/versions/{ref}:
+    delete:
+      operationId: deleteVersion
+      summary: Delete a single indexed version
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+      responses:
+        "204":
+          description: Version deleted
+        "404":
+          description: Repository or ref not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Indexing Status ──
+  /api/indexing-status:
+    get:
+      operationId: getAllIndexingStatus
+      summary: All active indexing progress entries
+      tags: [indexing]
+      responses:
+        "200":
+          description: Array of active indexing progress entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IndexingProgress"
+
+  /api/indexing-status/{name}/{ref}:
+    get:
+      operationId: getIndexingStatus
+      summary: Progress for a specific repo/ref
+      tags: [indexing]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+      responses:
+        "200":
+          description: Indexing progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexingProgress"
+        "404":
+          description: No active indexing tracked for this repo/ref
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Search ──
+  /api/search:
+    get:
+      operationId: searchCode
+      summary: Hybrid code search
+      tags: [search]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: query
+          schema:
+            type: string
+        - name: ref
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
+        "400":
+          description: Missing query parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Embedder not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── File tree ──
+  /api/repos/{name}/refs/{ref}/tree:
+    get:
+      operationId: getFileTree
+      summary: File tree listing
+      tags: [browse]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+        - name: prefix
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Array of file paths
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "404":
+          description: Repository or ref not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── File content ──
+  /api/repos/{name}/refs/{ref}/file:
+    get:
+      operationId: getFile
+      summary: File content with optional symbol list
+      tags: [browse]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: includeSymbols
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileContent"
+        "400":
+          description: Missing path parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Repository, ref, or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Symbol detail ──
+  /api/repos/{name}/refs/{ref}/symbols/{symbolName}:
+    get:
+      operationId: getSymbol
+      summary: Symbol detail with source and optional imports
+      tags: [browse]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+        - name: symbolName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeImports
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Symbol lookup result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SymbolLookup"
+        "404":
+          description: Repository, ref, or symbol not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Find ──
+  /api/repos/{name}/refs/{ref}/find:
+    get:
+      operationId: find
+      summary: Find files or symbols by pattern
+      tags: [browse]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+        - name: pattern
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [file, symbol]
+      responses:
+        "200":
+          description: Find results (file paths or symbol matches)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FindResult"
+        "400":
+          description: Missing pattern or kind parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Repository or ref not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── References ──
+  /api/repos/{name}/refs/{ref}/references/{symbolName}:
+    get:
+      operationId: findReferences
+      summary: Import-based references for a symbol
+      tags: [browse]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+        - $ref: "#/components/parameters/refParam"
+        - name: symbolName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Import references
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportReference"
+        "404":
+          description: Repository or ref not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Context Builder ──
+  /api/repos/{name}/context:
+    post:
+      operationId: buildContext
+      summary: Build a context pack
+      tags: [context]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContextBody"
+      responses:
+        "200":
+          description: Context pack result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextPackResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Embedder not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  parameters:
+    repoName:
+      name: name
+      in: path
+      required: true
+      schema:
+        type: string
+    refParam:
+      name: ref
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    # ── Generic ──
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # ── Repos ──
+    RepoRef:
+      type: object
+      required: [ref, stage, commitSha]
+      properties:
+        ref:
+          type: string
+        stage:
+          $ref: "#/components/schemas/IndexingStage"
+        commitSha:
+          type: string
+        indexingError:
+          type: string
+
+    Repo:
+      type: object
+      required: [id, name, defaultBranch, globPatterns, createdAt, refs]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        localPath:
+          type: ["string", "null"]
+        remoteUrl:
+          type: ["string", "null"]
+        defaultBranch:
+          type: string
+        globPatterns:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        mirrorStatus:
+          type: string
+          enum: [cloning, ready, error]
+        mirrorError:
+          type: string
+        tokenConfigured:
+          type: boolean
+        refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/RepoRef"
+
+    CreateRepoBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        localPath:
+          type: string
+        remoteUrl:
+          type: string
+        defaultBranch:
+          type: string
+        globPatterns:
+          type: array
+          items:
+            type: string
+
+    SyncBody:
+      type: object
+      required: [ref]
+      properties:
+        ref:
+          type: string
+          minLength: 1
+
+    UpdateRepoBody:
+      type: object
+      properties:
+        globPatterns:
+          type: array
+          items:
+            type: string
+
+    SyncResponse:
+      type: object
+      required: [jobId, repo, ref]
+      properties:
+        jobId:
+          type: string
+        repo:
+          type: string
+        ref:
+          type: string
+
+    GitRefs:
+      type: object
+      required: [branches, tags]
+      properties:
+        branches:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    # ── Indexing ──
+    IndexingStage:
+      type: string
+      enum:
+        - queued
+        - syncing
+        - resolving
+        - checking-out
+        - diffing
+        - processing-files
+        - embedding
+        - finalizing
+        - ready
+        - error
+
+    IndexingProgress:
+      type: object
+      required:
+        - repo
+        - ref
+        - stage
+        - message
+        - filesTotal
+        - filesProcessed
+        - chunksTotal
+        - chunksEmbedded
+        - startedAt
+        - updatedAt
+      properties:
+        repo:
+          type: string
+        ref:
+          type: string
+        stage:
+          $ref: "#/components/schemas/IndexingStage"
+        message:
+          type: string
+        filesTotal:
+          type: integer
+        filesProcessed:
+          type: integer
+        chunksTotal:
+          type: integer
+        chunksEmbedded:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+
+    # ── Search ──
+    SearchResult:
+      type: object
+      required: [filePath, repo, ref, content, startLine, endLine, score]
+      properties:
+        filePath:
+          type: string
+        repo:
+          type: string
+        ref:
+          type: string
+        content:
+          type: string
+        startLine:
+          type: integer
+        endLine:
+          type: integer
+        score:
+          type: number
+        symbolName:
+          type: string
+
+    # ── Browse ──
+    SymbolInfo:
+      type: object
+      required: [name, kind, signature, startLine, endLine]
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+        signature:
+          type: string
+        startLine:
+          type: integer
+        endLine:
+          type: integer
+        documentation:
+          type: ["string", "null"]
+
+    FileContent:
+      type: object
+      required: [repo, ref, path, content]
+      properties:
+        repo:
+          type: string
+        ref:
+          type: string
+        path:
+          type: string
+        content:
+          type: string
+        symbols:
+          type: array
+          items:
+            $ref: "#/components/schemas/SymbolInfo"
+
+    SymbolDetail:
+      type: object
+      required: [name, kind, filePath, startLine, endLine, signature, fileContentId, source]
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+        filePath:
+          type: string
+        startLine:
+          type: integer
+        endLine:
+          type: integer
+        signature:
+          type: string
+        documentation:
+          type: ["string", "null"]
+        fileContentId:
+          type: integer
+        source:
+          type: string
+
+    ImportReference:
+      type: object
+      required: [filePath, source, isDefault]
+      properties:
+        filePath:
+          type: string
+        source:
+          type: string
+        importedName:
+          type: string
+        isDefault:
+          type: boolean
+
+    SymbolLookup:
+      type: object
+      required: [symbols]
+      properties:
+        symbols:
+          type: array
+          items:
+            $ref: "#/components/schemas/SymbolDetail"
+        imports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportReference"
+
+    FindResult:
+      type: object
+      properties:
+        path:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        filePath:
+          type: string
+        startLine:
+          type: integer
+        endLine:
+          type: integer
+        signature:
+          type: string
+
+    # ── Context ──
+    ContextBody:
+      type: object
+      required: [strategy]
+      properties:
+        strategy:
+          type: string
+          enum: [explain, implement, debug, recent-changes]
+        ref:
+          type: string
+        fromRef:
+          type: string
+        query:
+          type: string
+        paths:
+          type: array
+          items:
+            type: string
+        maxTokens:
+          type: integer
+          exclusiveMinimum: 0
+
+    ContextChunk:
+      type: object
+      required: [filePath, startLine, endLine, content]
+      properties:
+        filePath:
+          type: string
+        startLine:
+          type: integer
+        endLine:
+          type: integer
+        content:
+          type: string
+        annotation:
+          type: string
+
+    ContextPackResult:
+      type: object
+      required: [strategy, repo, totalTokens, chunks, formatted]
+      properties:
+        strategy:
+          type: string
+        repo:
+          type: string
+        ref:
+          type: string
+        totalTokens:
+          type: integer
+        chunks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextChunk"
+        formatted:
+          type: string

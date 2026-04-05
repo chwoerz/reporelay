@@ -1,0 +1,43 @@
+<h2>Code Search</h2>
+
+<form (submit)="search($event)" class="search-form" [class.search-loading-glow]="loading()">
+  <div class="input-with-icon search-input">
+    <span class="mi">search</span>
+    <input class="input" placeholder="Search query" [value]="query()" (input)="query.set(asValue($event))" required />
+  </div>
+  <input class="input filter-input" placeholder="Repo (optional)" [value]="repo()" (input)="repo.set(asValue($event))" />
+  <input class="input filter-input" placeholder="Ref (optional)" [value]="ref()" (input)="ref.set(asValue($event))" />
+  <button class="btn btn-primary" type="submit" [disabled]="loading()">
+    @if (loading()) {
+      <span class="spinner spinner-sm spinner-cyan"></span>
+    } @else {
+      Search
+    }
+  </button>
+</form>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (results().length > 0) {
+  <p class="result-count">{{ results().length }} result(s)</p>
+}
+
+@for (r of results(); track $index) {
+  <div class="card result-card">
+    <div class="result-header">
+      <a [routerLink]="['/', r.repo, r.ref, 'browse']" [queryParams]="{ path: r.filePath }">
+        {{ r.repo }}&#64;{{ r.ref }}
+      </a>
+      <span class="file-path">{{ r.filePath }}</span>
+      <span class="line-range">L{{ r.startLine }}–{{ r.endLine }}</span>
+      <span class="score">{{ r.score.toFixed(3) }}</span>
+    </div>
+    <pre class="code-block result-code"><code [innerHTML]="r.content | highlight:langFor(r.filePath)"></code></pre>
+  </div>
+}
+
+@if (!loading() && searched() && results().length === 0) {
+  <p class="empty">No results found.</p>
+}

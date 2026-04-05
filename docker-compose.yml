@@ -1,0 +1,56 @@
+services:
+  # ── ParadeDB (Postgres + pgvector + pg_trgm + pg_search) ──
+  postgres:
+    image: paradedb/paradedb:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: reporelay
+      POSTGRES_USER: reporelay
+      POSTGRES_PASSWORD: reporelay
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reporelay -d reporelay"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Worker (pg-boss index job handler) ──
+  worker:
+    build: .
+    command: ["pnpm", "tsx", "src/worker/index.ts"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-ollama}
+      EMBEDDING_URL: ${EMBEDDING_URL:-http://host.docker.internal:11434}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      GIT_MIRRORS_DIR: /data/mirrors
+      GIT_WORKTREES_DIR: /data/worktrees
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - gitdata:/data
+
+  # ── Web API (Fastify) ──
+  web:
+    build: .
+    command: ["pnpm", "tsx", "src/web/main.ts"]
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+      WEB_PORT: 3001
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+volumes:
+  pgdata:
+  gitdata:

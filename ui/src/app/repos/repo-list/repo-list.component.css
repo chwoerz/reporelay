@@ -1,0 +1,200 @@
+/* ═══════════════════════════════════════
+   Add repo card
+   ═══════════════════════════════════════ */
+.add-card {
+  margin-bottom: 1.5rem;
+  padding: 0.85rem 1rem;
+  background: var(--cw-bg-surface);
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+}
+
+/* Shared row layout */
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.source-row {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0.5rem;
+}
+
+/* Name field stretches to fill */
+.name-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Submit button sits next to name */
+.submit-btn {
+  flex-shrink: 0;
+  height: 48px;
+}
+
+/* ── Source tab bar ── */
+.source-tabs {
+  display: flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-sm);
+  overflow: hidden;
+}
+
+.source-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.85rem;
+  border: none;
+  background: var(--cw-bg-surface);
+  color: var(--cw-text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+/* Divider between tabs */
+.source-tab + .source-tab {
+  border-left: 1px solid var(--cw-border);
+}
+
+.source-tab:hover {
+  color: var(--cw-text-primary);
+  background: var(--cw-bg-hover);
+}
+
+.source-tab.active {
+  color: var(--cw-accent-bright);
+  background: var(--cw-accent-dim);
+}
+
+.source-tab .mi {
+  font-size: 18px;
+}
+
+/* Source input stretches below tabs */
+.source-field {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+/* ── Inline token status hint below the remote URL input ── */
+.url-token-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.url-token-hint.ok {
+  color: var(--cw-green);
+}
+
+.url-token-hint.missing {
+  color: var(--cw-text-muted);
+}
+
+.url-token-icon {
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════════
+   Repo table
+   ═══════════════════════════════════════ */
+.repo-table a {
+  font-weight: 500;
+}
+
+.source-icon {
+  font-size: 16px;
+  color: var(--cw-text-muted);
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.source-text {
+  font-size: 0.85rem;
+  color: var(--cw-text-secondary);
+  font-family: var(--cw-font-mono);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 380px;
+  display: inline-block;
+}
+
+/* ── Token status icon (next to cloud icon for remote repos) ── */
+.token-icon {
+  font-size: 14px;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+  cursor: default;
+}
+
+.token-ok {
+  color: var(--cw-green);
+}
+
+.token-missing {
+  color: var(--cw-text-muted);
+  opacity: 0.6;
+}
+
+.ref-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--cw-bg-hover);
+  color: var(--cw-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--cw-font-mono);
+}
+
+.inline-spinner {
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.syncing-label {
+  font-size: 0.8rem;
+  color: var(--cw-cyan);
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+/* ── Mirror error label ── */
+.mirror-error-label {
+  font-size: 0.8rem;
+  color: var(--cw-red);
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════
+   Composio glow — active indexing rows
+   ═══════════════════════════════════════ */
+.row-indexing {
+  border-left: 3px solid var(--cw-cyan);
+  background: var(--cw-cyan-glow);
+}
+
+.row-indexing:hover {
+  background: rgba(0, 255, 255, 0.08);
+}

@@ -1,0 +1,125 @@
+.browser-layout {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  min-height: 70vh;
+}
+
+.tree-panel {
+  width: 280px;
+  flex-shrink: 0;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+  padding: 0.75rem;
+  overflow-y: auto;
+  max-height: 80vh;
+  background: var(--cw-bg-panel);
+}
+
+.tree-panel h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: var(--cw-text-secondary);
+}
+
+.filter-field {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.tree-file {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  font-family: var(--cw-font-mono);
+  cursor: pointer;
+  border-radius: var(--cw-radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--cw-text-secondary);
+  transition: all 0.15s ease;
+}
+
+.tree-file:hover {
+  background: var(--cw-bg-hover);
+  color: var(--cw-text-primary);
+}
+
+.tree-file.active {
+  background: var(--cw-accent-dim);
+  color: var(--cw-accent-bright);
+  font-weight: 600;
+  border-left: 2px solid var(--cw-accent-bright);
+}
+
+.file-icon {
+  font-size: 16px;
+  color: var(--cw-text-dim);
+  flex-shrink: 0;
+}
+
+.tree-file.active .file-icon {
+  color: var(--cw-accent-bright);
+}
+
+.content-panel {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+  overflow: hidden;
+  background: var(--cw-bg-surface);
+}
+
+.file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1rem;
+  background: var(--cw-bg-panel);
+  border-bottom: 1px solid var(--cw-border);
+  font-size: 0.92rem;
+}
+
+.file-path-display {
+  font-weight: 600;
+  font-family: var(--cw-font-mono);
+  color: var(--cw-text-primary);
+}
+
+.symbol-count {
+  color: var(--cw-text-muted);
+  font-size: 0.8rem;
+}
+
+.symbols-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--cw-bg-surface);
+  border-bottom: 1px solid var(--cw-border);
+}
+
+.sym-chip {
+  color: var(--cw-accent-bright);
+}
+.sym-chip:hover {
+  background: var(--cw-indigo-subtle-hover);
+}
+
+.sym-kind {
+  color: var(--cw-text-muted);
+  font-style: italic;
+}
+
+.code-view {
+  min-height: 300px;
+}
+
+.code-view code {
+  font-size: 0.85rem;
+}

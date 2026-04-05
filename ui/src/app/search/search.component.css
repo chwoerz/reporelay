@@ -1,0 +1,79 @@
+.search-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input {
+  flex: 2;
+  min-width: 200px;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.result-count {
+  color: var(--cw-text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-card {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.result-card:hover {
+  border-color: var(--cw-accent-bright);
+  box-shadow: var(--cw-glow), var(--cw-shadow-lg);
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: var(--cw-bg-panel);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--cw-border);
+}
+
+.result-header a {
+  font-weight: 600;
+  color: var(--cw-accent-bright);
+}
+
+.file-path {
+  color: var(--cw-text-muted);
+  font-family: var(--cw-font-mono);
+  font-size: 0.85rem;
+}
+
+.score {
+  margin-left: auto;
+  color: var(--cw-text-muted);
+  font-family: var(--cw-font-mono);
+  font-size: 0.82rem;
+  background: var(--cw-bg-surface);
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid var(--cw-border);
+}
+
+.result-code code {
+  font-size: 0.85rem;
+}
+
+/* ═══════════════════════════════════════
+   Composio glow — loading state
+   ═══════════════════════════════════════ */
+.search-loading-glow {
+  box-shadow: 0 0 16px var(--cw-cyan-glow);
+  border-color: var(--cw-cyan-glow);
+}

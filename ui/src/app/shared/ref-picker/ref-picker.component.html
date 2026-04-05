@@ -1,0 +1,49 @@
+<div class="ref-picker-wrapper" #wrapper>
+  <div class="ref-picker-input-wrap">
+    <span class="mi ref-input-icon">expand_more</span>
+    <input
+      class="input ref-picker-input"
+      [placeholder]="placeholder()"
+      [value]="search()"
+      (input)="onInput($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      (keydown)="onKeydown($event)"
+      autocomplete="off"
+    />
+    @if (search()) {
+      <button class="btn-icon ref-clear-btn" type="button" (click)="clear()" aria-label="Clear">
+        <span class="mi">close</span>
+      </button>
+    }
+  </div>
+
+  @if (dropdownOpen() && allFiltered().length > 0) {
+    <div class="ref-dropdown">
+      @if (filteredBranches().length > 0) {
+        <div class="ref-group-label">Branches</div>
+        @for (b of filteredBranches(); track b; let i = $index) {
+          <button
+            class="ref-option"
+            [class.highlighted]="highlightIndex() === i"
+            type="button"
+            (mousedown)="selectOption(b)">
+            <span class="mi branch-icon">fork_right</span> {{ b }}
+          </button>
+        }
+      }
+      @if (filteredTags().length > 0) {
+        <div class="ref-group-label">Tags</div>
+        @for (t of filteredTags(); track t; let i = $index) {
+          <button
+            class="ref-option"
+            [class.highlighted]="highlightIndex() === filteredBranches().length + i"
+            type="button"
+            (mousedown)="selectOption(t)">
+            <span class="mi tag-icon">local_offer</span> {{ t }}
+          </button>
+        }
+      }
+    </div>
+  }
+</div>

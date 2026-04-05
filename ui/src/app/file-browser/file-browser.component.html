@@ -1,0 +1,68 @@
+<a routerLink="/" class="back-link">
+  <span class="mi back-icon">arrow_back</span> Repos
+</a>
+<span class="breadcrumb"> / <a [routerLink]="['/', repoName()]">{{ repoName() }}</a> / {{ refName() }}</span>
+
+<div class="browser-layout">
+  <!-- File tree (left panel) -->
+  <aside class="tree-panel">
+    <h3>Files</h3>
+    <div class="input-with-icon filter-field">
+      <span class="mi">filter_list</span>
+      <input class="input" placeholder="Filter files" [value]="filter()" (input)="filter.set(asValue($event))" />
+    </div>
+    @if (treeLoading()) {
+      <div class="spinner-container">
+        <span class="spinner spinner-md"></span>
+      </div>
+    }
+    @for (path of filteredPaths(); track path) {
+      <div
+        class="tree-file"
+        [class.active]="path === selectedPath()"
+        (click)="selectFile(path)"
+      >
+        <span class="mi file-icon">description</span>
+        {{ path }}
+      </div>
+    }
+  </aside>
+
+  <!-- File content (right panel) -->
+  <section class="content-panel">
+    @if (!selectedPath()) {
+      <p class="muted" style="padding: 1rem;">Select a file from the tree to view its contents.</p>
+    }
+
+    @if (fileLoading()) {
+      <div class="spinner-container">
+        <span class="spinner spinner-lg"></span>
+      </div>
+    }
+
+    @if (fileError()) {
+      <p class="error" style="padding: 1rem;">{{ fileError() }}</p>
+    }
+
+    @if (fileData(); as f) {
+      <div class="file-header">
+        <span class="file-path-display">{{ f.path }}</span>
+        @if (f.symbols && f.symbols.length > 0) {
+          <span class="symbol-count">{{ f.symbols.length }} symbol(s)</span>
+        }
+      </div>
+
+      @if (f.symbols && f.symbols.length > 0) {
+        <div class="symbols-bar">
+          @for (sym of f.symbols; track sym.name) {
+            <span class="chip chip-clickable sym-chip" (click)="scrollToLine(sym.startLine)">
+              <span class="sym-kind">{{ sym.kind }}</span> {{ sym.name }}
+            </span>
+          }
+        </div>
+      }
+
+      <pre class="code-block code-view" #codeView><code [innerHTML]="highlightedContent()"></code></pre>
+    }
+  </section>
+</div>

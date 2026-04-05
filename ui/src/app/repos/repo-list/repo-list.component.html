@@ -1,0 +1,143 @@
+<h2>Repositories</h2>
+
+<!-- ── Add repo card ── -->
+<form (submit)="addRepo($event)" class="add-card">
+
+  <!-- Row 1: Name + Submit -->
+  <div class="add-row">
+    <input
+      class="input name-field"
+      placeholder="Repository name"
+      [value]="name()"
+      (input)="name.set(asValue($event))"
+      required
+    />
+
+    @if (adding()) {
+      <button class="btn btn-primary submit-btn" type="button" disabled>
+        <span class="spinner spinner-sm spinner-cyan"></span>
+      </button>
+    } @else {
+      <button class="btn btn-primary submit-btn" type="submit" [disabled]="!canSubmit()">
+        <span class="mi">add</span> Add
+      </button>
+    }
+  </div>
+
+  <!-- Row 2: Source toggle + input -->
+  <div class="add-row source-row">
+    <div class="source-tabs">
+      <button
+        type="button"
+        class="source-tab"
+        [class.active]="sourceType() === 'local'"
+        (click)="selectSource('local')"
+      >
+        <span class="mi">folder_open</span> Local
+      </button>
+      <button
+        type="button"
+        class="source-tab"
+        [class.active]="sourceType() === 'remote'"
+        (click)="selectSource('remote')"
+      >
+        <span class="mi">cloud_download</span> Remote
+      </button>
+    </div>
+
+    @if (sourceType() === 'local') {
+      <input
+        class="input source-field"
+        placeholder="Path on disk, e.g. /home/user/project"
+        [value]="localPath()"
+        (input)="localPath.set(asValue($event))"
+        required
+      />
+    }
+
+    @if (sourceType() === 'remote') {
+      <input
+        class="input source-field"
+        placeholder="Git URL, e.g. https://github.com/org/repo.git"
+        [value]="remoteUrl()"
+        (input)="remoteUrl.set(asValue($event))"
+        required
+      />
+      @if (remoteUrlTokenStatus(); as status) {
+        <span class="url-token-hint" [class.ok]="status === 'ok'" [class.missing]="status === 'missing'">
+          @if (status === 'ok') {
+            <span class="mi url-token-icon">vpn_key</span> Token found
+          } @else {
+            <span class="mi url-token-icon">vpn_key_off</span> No token for this host
+          }
+        </span>
+      }
+    }
+  </div>
+</form>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<!-- ── Repo table ── -->
+@if (repos.isLoading() && !repos.hasValue()) {
+  <div class="spinner-container">
+    <span class="spinner spinner-lg"></span>
+  </div>
+}
+
+@if (repos.value(); as list) {
+  @if (list.length === 0) {
+    <p class="empty">No repositories yet — add one above to get started.</p>
+  } @else {
+    <table class="data-table repo-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Source</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (repo of list; track repo.name) {
+          <tr [class.row-indexing]="!!progressForRepo(repo.name) || repo.mirrorStatus === 'cloning'">
+            <td><a [routerLink]="['/', repo.name]">{{ repo.name }}</a></td>
+            <td class="source-cell">
+              @if (repo.localPath) {
+                <span class="mi source-icon">folder_open</span>
+              } @else if (repo.remoteUrl) {
+                <span class="mi source-icon">cloud</span>
+                @if (repo.tokenConfigured) {
+                  <span class="mi token-icon token-ok" title="Authentication token configured">vpn_key</span>
+                } @else {
+                  <span class="mi token-icon token-missing" title="No authentication token — set GIT_TOKEN_&lt;HOST&gt; in .env">vpn_key_off</span>
+                }
+              }
+              <span class="source-text">{{ repo.localPath || repo.remoteUrl || '—' }}</span>
+            </td>
+            <td>
+              @if (repo.mirrorStatus === 'cloning') {
+                <span class="spinner spinner-sm spinner-cyan inline-spinner"></span>
+                <span class="syncing-label">Cloning mirror…</span>
+              } @else if (repo.mirrorStatus === 'error') {
+                <span class="mirror-error-label">Mirror error</span>
+              } @else if (progressForRepo(repo.name); as p) {
+                <span class="spinner spinner-sm spinner-cyan inline-spinner"></span>
+                <span class="syncing-label">{{ p.ref }}: {{ progressStageLabel(p) }}</span>
+              } @else {
+                <span class="ref-badge">{{ repo.refs.length }}</span>
+              }
+            </td>
+            <td>
+              <button class="btn-icon warn" (click)="deleteRepo(repo.name)" aria-label="Delete repo">
+                <span class="mi">delete</span>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+}

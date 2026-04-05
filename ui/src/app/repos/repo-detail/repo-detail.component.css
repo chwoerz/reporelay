@@ -1,0 +1,217 @@
+dl {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0.25rem 1rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--cw-bg-surface);
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+}
+
+dt {
+  font-weight: 600;
+  color: var(--cw-text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-top: 0.15rem;
+}
+
+dd {
+  margin: 0;
+  color: var(--cw-text-primary);
+  font-family: var(--cw-font-mono);
+  font-size: 0.9rem;
+}
+
+/* ── Auth status row ── */
+.auth-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--cw-font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.auth-icon {
+  font-size: 16px;
+}
+
+.auth-ok {
+  color: var(--cw-green);
+}
+
+.auth-missing {
+  color: var(--cw-text-muted);
+}
+
+.quick-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sync-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  align-items: center;
+}
+
+.glob-field {
+  width: 300px;
+}
+
+/* ── Glob settings section ── */
+.glob-settings {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--cw-bg-surface);
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+}
+
+.glob-label {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cw-text-muted);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.glob-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.glob-message {
+  font-size: 0.8rem;
+  color: var(--cw-green);
+}
+
+.glob-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--cw-text-muted);
+}
+
+.mono {
+  font-family: var(--cw-font-mono);
+  font-size: 0.9rem;
+  color: var(--cw-text-secondary);
+}
+
+/* ── Stage chips ── */
+.stage-chip {
+  font-size: 0.75rem;
+}
+
+.stage-ready {
+  color: var(--cw-green);
+  background: var(--cw-green-subtle);
+}
+
+.stage-queued,
+.stage-syncing,
+.stage-resolving,
+.stage-checking-out,
+.stage-diffing,
+.stage-processing-files,
+.stage-embedding,
+.stage-finalizing {
+  color: var(--cw-cyan);
+  background: var(--cw-cyan-glow);
+}
+
+.stage-error {
+  color: var(--cw-red);
+  background: var(--cw-red-subtle);
+}
+
+.ref-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* ── Progress row ── */
+.progress-detail-row {
+  height: 0;
+}
+
+.progress-detail-cell {
+  padding: 0 !important;
+  border-bottom-width: 0;
+}
+
+/* ── Indexing error detail row ── */
+.error-detail-row {
+  height: 0;
+}
+
+.error-detail-cell {
+  padding: 0.5rem 1rem !important;
+  border-bottom-width: 0;
+  background: var(--cw-red-subtle-bg);
+}
+
+.error-detail-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.error-detail-icon {
+  font-size: 16px;
+  color: var(--cw-red);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.error-detail-text {
+  font-family: var(--cw-font-mono);
+  font-size: 0.8rem;
+  color: var(--cw-red);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.initial-sync-card {
+  margin-bottom: 1rem;
+}
+
+.initial-sync-card strong {
+  font-family: var(--cw-font-mono);
+  font-size: 0.88rem;
+  color: var(--cw-text-primary);
+}
+
+/* ── Cloning detail banner ── */
+.cloning-detail-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 1rem 0;
+  padding: 0.7rem 1rem;
+  border-radius: var(--cw-radius-sm);
+  background: var(--cw-accent-dim);
+  border: 1px solid var(--cw-accent);
+  font-size: 0.85rem;
+  color: var(--cw-text-primary);
+}
+
+/* ═══════════════════════════════════════
+   Composio glow — active indexing rows
+   ═══════════════════════════════════════ */
+.row-indexing {
+  border-left: 3px solid var(--cw-cyan);
+  background: var(--cw-cyan-glow);
+}
+
+.row-indexing:hover {
+  background: rgba(0, 255, 255, 0.08);
+}

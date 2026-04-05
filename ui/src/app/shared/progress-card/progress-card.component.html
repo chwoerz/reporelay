@@ -1,0 +1,46 @@
+<div class="progress-card"
+  [class.pending-progress-card]="pending()"
+  [class.progress-error]="progress().stage === 'error'">
+  <div class="progress-header">
+    @if (showRefName()) {
+      <strong class="pending-ref-name">{{ progress().ref }}</strong>
+    }
+    <span class="chip progress-stage-chip">{{ stageLabel(progress().stage) }}</span>
+    <span class="progress-message">{{ messageText() }}</span>
+  </div>
+
+  @if (currentFile()) {
+    <div class="current-file">
+      <span class="mi current-file-icon">description</span>
+      <span class="current-file-path">{{ currentFile() }}</span>
+    </div>
+  }
+
+  @if (progress().filesTotal > 0) {
+    <div class="progress-bar-container">
+      <div class="progress-bar cyan-bar">
+        <div class="progress-bar-fill" [style.width.%]="filePercent(progress())"></div>
+      </div>
+      <span class="progress-numbers">{{ progress().filesProcessed }} / {{ progress().filesTotal }} files</span>
+    </div>
+  }
+
+  @if (progress().chunksTotal > 0) {
+    <div class="progress-bar-container">
+      <div class="progress-bar cyan-bar">
+        <div class="progress-bar-fill" [style.width.%]="chunkPercent(progress())"></div>
+      </div>
+      <span class="progress-numbers">{{ progress().chunksEmbedded }} / {{ progress().chunksTotal }} chunks embedded</span>
+    </div>
+  }
+
+  @if (progress().stage !== 'error' && progress().filesTotal === 0 && progress().chunksTotal === 0) {
+    <div class="progress-bar progress-bar-indeterminate cyan-bar">
+      <div class="progress-bar-fill"></div>
+    </div>
+  }
+
+  @if (progress().error) {
+    <div class="progress-error-text">{{ progress().error }}</div>
+  }
+</div>

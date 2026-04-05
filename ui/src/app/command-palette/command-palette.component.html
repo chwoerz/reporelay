@@ -1,0 +1,41 @@
+<!-- Command palette overlay — Raycast-inspired floating panel -->
+@if (open) {
+  <div class="palette-scrim" (click)="onScrimClick($event)">
+    <div class="palette-panel" role="dialog" aria-label="Command palette">
+      <div class="palette-input-row">
+        <span class="mi palette-search-icon">search</span>
+        <input
+          #searchInput
+          class="palette-input"
+          type="text"
+          placeholder="Search repos, code, actions..."
+          autocomplete="off"
+          spellcheck="false"
+          (input)="onFilterInput($event)" />
+      </div>
+
+      <div class="palette-divider"></div>
+
+      <div class="palette-results">
+        @for (group of groupedItems(); track group.name; let gi = $index) {
+          <div class="palette-group">
+            <div class="palette-group-header">{{ group.name }}</div>
+            @for (item of group.items; track item.id; let ii = $index) {
+              <button
+                class="palette-item"
+                [class.selected]="selectedIndex() === flatIndex(gi, ii)"
+                (click)="selectItem(item)"
+                (mouseenter)="selectedIndex.set(flatIndex(gi, ii))">
+                <span class="mi palette-item-icon">{{ item.icon }}</span>
+                <span class="palette-item-label">{{ item.label }}</span>
+              </button>
+            }
+          </div>
+        }
+        @if (filteredItems().length === 0) {
+          <div class="palette-empty">No results</div>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,90 @@
+.ref-picker-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ref-picker-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ref-input-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 18px;
+  color: var(--cw-text-muted);
+  pointer-events: none;
+}
+
+.ref-picker-input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 36px;
+}
+
+.ref-clear-btn {
+  position: absolute;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+}
+.ref-clear-btn .mi {
+  font-size: 18px;
+}
+
+/* ── Dropdown ── */
+.ref-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  margin-top: 4px;
+  background: var(--cw-bg-surface);
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-sm);
+  box-shadow: var(--cw-shadow-lg);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ref-group-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cw-text-dim);
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.ref-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  background: none;
+  color: var(--cw-text-secondary);
+  font-family: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+.ref-option:hover,
+.ref-option.highlighted {
+  background: var(--cw-bg-hover);
+  color: var(--cw-text-primary);
+}
+
+.branch-icon {
+  color: var(--cw-accent-bright);
+  font-size: 18px;
+}
+
+.tag-icon {
+  color: var(--cw-amber);
+  font-size: 18px;
+}

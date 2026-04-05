@@ -1,0 +1,109 @@
+<a routerLink="/" class="back-link">
+  <span class="mi back-icon">arrow_back</span> Repos
+</a>
+<span class="breadcrumb"> / <a [routerLink]="['/', repoName()]">{{ repoName() }}</a> / Context Builder</span>
+
+<h2>Context Builder</h2>
+<p class="subtitle">Build task-specific code context packs for LLM prompts.</p>
+
+<form (submit)="build($event)" class="form" [class.context-loading-glow]="loading()">
+  <div class="form-row">
+    <label class="form-label">Strategy</label>
+    <select class="select full-width" [value]="strategy()" (change)="strategy.set($any($event.target).value)">
+      <option value="explain">Explain — understand how a module works</option>
+      <option value="implement">Implement — get patterns for building features</option>
+      <option value="debug">Debug — get context for error diagnosis</option>
+      <option value="recent-changes">Recent Changes — compare two refs</option>
+    </select>
+  </div>
+
+  <div class="form-row">
+    <label class="form-label">Ref / tag</label>
+    @if (gitRefs.value(); as refs) {
+      <app-ref-picker
+        [gitRefs]="refs"
+        placeholder="e.g. v1.0.0, main, ^2.0.0"
+        (refSelected)="ref.set($event)"
+      />
+    } @else {
+      <input class="input full-width" placeholder="e.g. v1.0.0, main, ^2.0.0" [value]="ref()" (input)="ref.set(asValue($event))" />
+    }
+  </div>
+
+  @if (strategy() === 'recent-changes') {
+    <div class="form-row">
+      <label class="form-label">From ref (base)</label>
+      @if (gitRefs.value(); as refs) {
+        <app-ref-picker
+          [gitRefs]="refs"
+          placeholder="e.g. v1.0.0"
+          (refSelected)="fromRef.set($event)"
+        />
+      } @else {
+        <input class="input full-width" placeholder="e.g. v1.0.0" [value]="fromRef()" (input)="fromRef.set(asValue($event))" />
+      }
+    </div>
+  }
+
+  <div class="form-row">
+    <label class="form-label">Query</label>
+    <textarea
+      class="input full-width"
+      placeholder="Describe what you're looking for…"
+      [value]="query()"
+      (input)="query.set(asValue($event))"
+      rows="3"
+    ></textarea>
+  </div>
+
+  <div class="form-row">
+    <label class="form-label">Max tokens</label>
+    <input class="input full-width" type="number" placeholder="8192" [value]="maxTokens()" (input)="maxTokens.set(asValue($event))" />
+  </div>
+
+  @if (loading()) {
+    <button class="btn btn-primary" type="button" disabled>
+      <span class="spinner spinner-sm spinner-cyan"></span>
+    </button>
+  } @else {
+    <button class="btn btn-primary" type="submit">
+      <span class="mi">build</span> Build Context Pack
+    </button>
+  }
+</form>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (result(); as r) {
+  <div class="card result-section">
+    <div class="result-header">
+      <span class="chip strategy-badge">{{ r.strategy }}</span>
+      <span>{{ r.repo }}&#64;{{ r.ref ?? 'latest' }}</span>
+      <span class="token-count">{{ r.totalTokens }} tokens</span>
+      <span class="chunk-count">{{ r.chunks.length }} chunks</span>
+      <button class="btn btn-outline" (click)="copyFormatted()">
+        <span class="mi">content_copy</span> Copy
+      </button>
+    </div>
+
+    <!-- Chunk breakdown -->
+    <div class="chunks-summary">
+      @for (chunk of r.chunks; track $index) {
+        <div class="chunk-summary-item">
+          <a [routerLink]="['/', repoName(), r.ref ?? '', 'browse']" [queryParams]="{ path: chunk.filePath }">
+            {{ chunk.filePath }}
+          </a>
+          <span class="line-range">L{{ chunk.startLine }}–{{ chunk.endLine }}</span>
+          @if (chunk.annotation) {
+            <span class="chip annotation-chip">{{ chunk.annotation }}</span>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Formatted output -->
+    <pre class="code-block formatted-output"><code [innerHTML]="r.formatted | highlight"></code></pre>
+  </div>
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+.reporelay
+.env
+.git
+.idea
+.DS_Store
+*.log
+ui/node_modules
+ui/dist
+ui/.angular
+

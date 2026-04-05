@@ -1,0 +1,7 @@
+dist
+node_modules
+.watson
+ui
+src/generated
+pnpm-lock.yaml
+drizzle

@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.reporelay/
+*.log
+.DS_Store
+.idea/
+
+docs/.vitepress
+
+.playwright-mcp

@@ -1,0 +1,88 @@
+.search-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+}
+
+.kind-select {
+  width: 140px;
+}
+
+.find-results {
+  margin-bottom: 1.5rem;
+}
+
+.sym-kind {
+  color: var(--cw-accent-bright);
+  font-style: italic;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+
+.sym-file {
+  font-family: var(--cw-font-mono);
+}
+
+.symbol-detail {
+  margin-top: 1.5rem;
+}
+
+.symbol-card {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.symbol-card:hover {
+  border-color: var(--cw-accent-bright);
+}
+
+.symbol-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: var(--cw-bg-panel);
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--cw-border);
+}
+
+.sym-kind-badge {
+  color: var(--cw-accent-bright);
+  background: var(--cw-indigo-subtle);
+}
+
+.line-range {
+  margin-left: auto;
+}
+
+.sym-doc {
+  padding: 0.7rem 1rem;
+  margin: 0;
+  color: var(--cw-text-secondary);
+  font-style: italic;
+  border-bottom: 1px solid var(--cw-border);
+  background: var(--cw-bg-surface);
+}
+
+.sig {
+  padding: 0.7rem 1rem;
+  font-family: var(--cw-font-mono);
+  font-size: 0.88rem;
+  background: var(--cw-bg-surface);
+  border-bottom: 1px solid var(--cw-border);
+  color: var(--cw-accent-bright);
+}
+
+.imports-list {
+  margin-bottom: 1rem;
+}
+
+.import-source {
+  font-family: var(--cw-font-mono);
+}

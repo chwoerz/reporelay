@@ -1,0 +1,128 @@
+/* ══════════════════════════════════════════════════════
+   RepoRelay · Custom highlight.js Theme
+   Matches Linear dark palette tokens from styles.css.
+   Replaces github-dark.min.css.
+   ══════════════════════════════════════════════════════ */
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1rem;
+  color: #d0d6e0;            /* --cw-text-secondary */
+  background: #191a1b;       /* --cw-bg-surface     */
+  border-radius: 6px;        /* --cw-radius-sm      */
+}
+
+/* Keywords: if, else, return, const, let, import, export, etc. */
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #7170ff;            /* --cw-accent-bright  */
+}
+
+/* Strings and template literals */
+.hljs-string,
+.hljs-doctag,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: #27a644;            /* --cw-green          */
+}
+
+/* Numbers and literals */
+.hljs-number,
+.hljs-literal {
+  color: #FF6363;            /* --cw-red            */
+}
+
+/* Function names and titles */
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: #828fff;            /* --cw-accent-hover   */
+}
+
+/* Types, built-ins, class names */
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_ {
+  color: #00c8c8;            /* Teal (muted cyan)   */
+}
+
+/* Parameters and variables */
+.hljs-params,
+.hljs-variable {
+  color: #d0d6e0;            /* --cw-text-secondary */
+}
+
+/* Comments */
+.hljs-comment {
+  color: #62666d;            /* --cw-text-dim       */
+  font-style: italic;
+}
+
+/* Attributes in HTML/JSX */
+.hljs-attr,
+.hljs-attribute {
+  color: #828fff;            /* --cw-accent-hover   */
+}
+
+/* Selectors in CSS */
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-pseudo {
+  color: #7170ff;            /* --cw-accent-bright  */
+}
+
+/* Property names (CSS, JSON) */
+.hljs-property {
+  color: #d0d6e0;            /* --cw-text-secondary */
+}
+
+/* Meta/preprocessor */
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-meta .hljs-string {
+  color: #8a8f98;            /* --cw-text-muted     */
+}
+
+/* Regex */
+.hljs-regexp {
+  color: #e6a817;            /* --cw-amber          */
+}
+
+/* Symbols and bullets */
+.hljs-symbol,
+.hljs-bullet {
+  color: #e6a817;            /* --cw-amber          */
+}
+
+/* Links in markdown */
+.hljs-link {
+  color: #7170ff;            /* --cw-accent-bright  */
+  text-decoration: underline;
+}
+
+/* Additions (diff) */
+.hljs-addition {
+  color: #27a644;            /* --cw-green          */
+  background: rgba(39, 166, 68, 0.12);
+}
+
+/* Deletions (diff) */
+.hljs-deletion {
+  color: #FF6363;            /* --cw-red            */
+  background: rgba(255, 99, 99, 0.12);
+}
+
+/* Emphasis and strong */
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* Name and tag — XML/HTML element names */
+.hljs-name,
+.hljs-tag {
+  color: #7170ff;            /* --cw-accent-bright  */
+}
