@@ -14,7 +14,7 @@ hero:
       link: /guide/why-reporelay
     - theme: alt
       text: GitHub
-      link: https://github.com/your-org/reporelay
+      link: https://github.com/chwoerz/reporelay
 
 features:
   - icon: 🔍
