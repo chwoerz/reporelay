@@ -1,6 +1,6 @@
 # AGENTS.md — RepoRelay
 
-Self-hosted, MCP-native code context engine for private repositories.
+Self-hosted, MCP-native code context engine for any Git repository — public or private.
 TypeScript (strict ESM), Fastify, Drizzle ORM, tree-sitter, pg-boss, pgvector/ParadeDB.
 
 ## Build / Dev / Test Commands

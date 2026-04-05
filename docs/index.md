@@ -4,7 +4,7 @@ layout: home
 hero:
   name: RepoRelay
   text: Code context for LLMs
-  tagline: Self-hosted, MCP-native code context engine. Index your private repos. Keep everything local.
+  tagline: Self-hosted, MCP-native code context engine. Index any Git repo. Keep everything local.
   actions:
     - theme: brand
       text: Get Started

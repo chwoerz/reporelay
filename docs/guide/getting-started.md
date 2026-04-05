@@ -11,7 +11,7 @@
 ## 1. Clone and install
 
 ```bash
-git clone https://github.com/your-org/reporelay.git
+git clone https://github.com/chwoerz/reporelay.git
 cd reporelay
 pnpm install
 ```

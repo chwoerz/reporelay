@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.png">
-    <img alt="RepoRelay — MCP-native code context engine for private repositories" src="assets/banner-dark.png" width="600">
+    <img alt="RepoRelay — Self-hosted, MCP-native code context engine" src="assets/banner-dark.png" width="600">
   </picture>
 </p>
 
@@ -22,9 +22,9 @@
 
 ---
 
-**RepoRelay** is a self-hosted code context engine that makes your private repositories deeply searchable and contextually available to any LLM. It indexes your Git repos — code, docs, tests, examples — and exposes the knowledge through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io).
+**RepoRelay** is a self-hosted code context engine that makes any Git repository — public or private — deeply searchable and contextually available to any LLM. It indexes your repos — code, docs, tests, examples — and exposes the knowledge through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io).
 
-Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, and your LLM instantly gains deep understanding of your entire codebase. No code leaves your infrastructure.
+Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, and your LLM instantly gains deep understanding of your entire codebase. Because it's self-hosted, even private repositories stay on your infrastructure.
 
 ---
 
