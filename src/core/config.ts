@@ -23,10 +23,21 @@ export const configSchema = z.object({
   /**
    * Comma-separated list of languages to include in MCP search results.
    * When set, only files/chunks in these languages are returned.
-   * When empty/unset, all languages are included.
+   * When empty/unset, languages are auto-detected from the current working
+   * directory's manifest files (e.g. package.json → typescript, Cargo.toml → rust).
+   * If auto-detection finds nothing, all languages are included.
    * Example: "java,kotlin" or "typescript,javascript"
    */
   MCP_LANGUAGES: z.string().optional(),
+  /**
+   * Minimum language_stats percentage (0–100) for a repo ref to be
+   * considered a match when filtering by language.
+   * A ref is included if at least one of its detected languages meets this threshold.
+   * Set to 0 to disable language-based repo filtering entirely
+   * (all repos are served regardless of detected languages).
+   * Default: 10 (i.e. the language must represent ≥10% of the ref's files).
+   */
+  MCP_LANGUAGE_THRESHOLD: z.coerce.number().min(0).max(100).default(10),
 
   // Web
   WEB_PORT: z.coerce.number().int().positive().default(3001),

@@ -292,7 +292,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
       inputSchema: z.object({}),
     },
     async () => {
-      const entries = await listReposWithRefs(deps.db);
+      const entries = await listReposWithRefs(deps.db, deps.languages, deps.languageThreshold);
 
       if (entries.length === 0) return textResult("No repositories registered.");
 

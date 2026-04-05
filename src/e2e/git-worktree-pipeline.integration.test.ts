@@ -110,6 +110,7 @@ describe("E2E: git sync → worktree checkout → pipeline → search (integrati
         WEB_PORT: 3001,
         GIT_MIRRORS_DIR: mirrorsDir,
         GIT_WORKTREES_DIR: worktreesDir,
+        MCP_LANGUAGE_THRESHOLD: 10,
         LOG_LEVEL: "fatal",
       };
 

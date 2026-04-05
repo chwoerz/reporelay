@@ -9,12 +9,12 @@ Bottom-up, test-driven. Each step: implement the module → fill in its `it.todo
 Zero dependencies. Everything else imports from here.
 
 - [x] Shared types & interfaces (`ParsedSymbol`, `ParsedImport`, `Chunk`, `FileRecord`, `Repo`, `RepoRef`, `Language`, `SearchResult`, `IndexJob`, etc.)
-- [x] Zod schemas for config validation (12 env vars)
+- [x] Zod schemas for config validation (13 env vars, including `MCP_LANGUAGE_THRESHOLD`)
 - [x] Config loader (`.env` → validated config object via `dotenv` + Zod)
 - [x] Pino logger factory
 - [x] In-memory indexing progress tracker with cross-process sync via PostgreSQL `LISTEN/NOTIFY`
 - [x] `connectPublisher(sql)` (worker) and `connectSubscriber(sql)` (web) for progress broadcasting
-- [x] **Tests:** `core/config.test.ts` (13) ✅
+- [x] **Tests:** `core/config.test.ts` ✅
 
 ### Step 2 — `src/git/` (file classifier, sync, diff, refs)
 
@@ -30,7 +30,8 @@ Pure logic + `simple-git`. No DB dependency.
 - [x] `normalizeHost(host)` — converts hostname to env-var-safe suffix (e.g. `github.com` → `GITHUB_COM`)
 - [x] `hasTokenConfigured(remoteUrl, env)` / `getConfiguredHosts(env)` — UI helpers for token status
 - [x] Known-host username defaults: github.com → `x-access-token`, gitlab.com → `oauth2`, bitbucket.org → `x-token-auth`
-- [x] **Tests:** `git/file-classifier.test.ts` (15), `git/git-sync.test.ts` (21), `git/git-credentials.test.ts` (23) ✅
+- [x] Language detector: `detectLanguagesFromDir(dir)` scans for well-known manifest files (package.json, Cargo.toml, go.mod, pyproject.toml, pom.xml, CMakeLists.txt, etc.) and returns the detected `Language[]`
+- [x] **Tests:** `git/file-classifier.test.ts`, `git/git-sync.test.ts`, `git/git-credentials.test.ts`, `git/language-detector.test.ts` ✅
 
 ### Step 3 — `src/parser/` (tree-sitter, markdown)
 
@@ -42,7 +43,7 @@ Per-language tree-sitter extractors live in `src/parser/languages/`.
 - [x] tree-sitter parser: TS/JS, Python, Go, Java, Kotlin, Rust, C, C++ symbol + import extraction
 - [x] Markdown parser: heading hierarchy, code blocks, links
 - [x] Parser registry: language → tree-sitter grammar dispatch
-- [x] **Tests:** `parser/tree-sitter-parser.test.ts` (51), `parser/markdown-parser.test.ts` (7), `parser/parse.test.ts` (4) ✅
+- [x] **Tests:** `parser/tree-sitter-parser.test.ts`, `parser/markdown-parser.test.ts`, `parser/parse.test.ts` ✅
 
 ### Step 4 — `src/storage/` (Drizzle schema, migrations, repositories, pg-boss)
 
@@ -95,7 +96,7 @@ Organized into three sub-folders:
 - [x] pg-boss wrapper: init, enqueue index job, handler registration, cancel jobs
 - [x] `ImportRepository`: `findByFileContentId`, `findReferencesInRef` (named + default import lookup)
 - [x] `FileContentRepository.deleteOrphans()` — removes file_contents no longer referenced by any ref_files
-- [x] **Tests:** `storage/schema/schema.integration.test.ts` (20), `storage/repositories/import-repository.integration.test.ts` (11), `storage/queue/queue.integration.test.ts` (10), `storage/queue/queue.test.ts` (6) ✅
+- [x] **Tests:** `storage/schema/schema.integration.test.ts`, `storage/repositories/import-repository.integration.test.ts`, `storage/queue/queue.integration.test.ts`, `storage/queue/queue.test.ts` ✅
 
 ### Step 5 — `src/indexer/` (chunker, embedder, pipeline)
 
@@ -113,7 +114,7 @@ Glues parser → storage. The pipeline integration test is the big validation.
 - [x] Pipeline orchestrator: git ls-tree → parse → chunk → embed → store → status update (always-full-index model)
 - [x] Per-file error isolation — `try/catch` per file, emit `file-error` event, continue processing
 - [x] `file-skipped` / `file-error` progress event types
-- [x] **Tests:** `indexer/chunker.test.ts` (25), `indexer/embedder.test.ts` (15), `indexer/embedder-ollama.test.ts` (9), `indexer/pipeline.integration.test.ts` (21) ✅
+- [x] **Tests:** `indexer/chunker.test.ts`, `indexer/embedder.test.ts`, `indexer/embedder-ollama.test.ts`, `indexer/pipeline.integration.test.ts` ✅
 
 ### Step 6 — `src/retrieval/` (semver resolver, hybrid search, context builder)
 
@@ -136,7 +137,7 @@ BM25 and vector search are implemented here (not in storage/) using raw SQL.
 - [x] `RefFileRepository.findChangedBetweenRefs(fromRefId, toRefId)`
 - [x] Context builder strategies: `explain`, `implement`, `debug`, `recent-changes`
 - [x] Token budget: truncate least-relevant chunks, order by file path then line number
-- [x] **Tests:** `retrieval/semver-resolver.test.ts` (8), `retrieval/hybrid-search.test.ts` (8), `retrieval/context-builder.test.ts` (7), `retrieval/hybrid-search.integration.test.ts` (8) ✅
+- [x] **Tests:** `retrieval/semver-resolver.test.ts`, `retrieval/hybrid-search.test.ts`, `retrieval/context-builder.test.ts`, `retrieval/hybrid-search.integration.test.ts` ✅
 
 ### Step 7 — `src/services/` (shared service layer)
 
@@ -145,16 +146,17 @@ eliminating duplication between those two surfaces.
 
 **Functions:**
 
-| Function            | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `findRepo`          | Resolve repo name → DB row                               |
-| `resolveRepoAndRef` | Resolve repo + optional ref → fully-resolved repo & ref  |
-| `getFileContent`    | Raw file from git mirror, fallback to indexed chunks     |
-| `getSymbol`         | Symbol by name with source from chunks, optional imports |
-| `findByPattern`     | Files or symbols by name/path pattern (ILIKE)            |
-| `findReferences`    | Files that import a given symbol name                    |
-| `buildContext`      | Context pack (explain/implement/debug/recent-changes)    |
-| `searchCode`        | Hybrid lexical + vector search                           |
+| Function            | Description                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `listReposWithRefs` | List repos + refs, optionally filtered by language + threshold against `language_stats` |
+| `findRepo`          | Resolve repo name → DB row                                                              |
+| `resolveRepoAndRef` | Resolve repo + optional ref → fully-resolved repo & ref                                 |
+| `getFileContent`    | Raw file from git mirror, fallback to indexed chunks                                    |
+| `getSymbol`         | Symbol by name with source from chunks, optional imports                                |
+| `findByPattern`     | Files or symbols by name/path pattern (ILIKE)                                           |
+| `findReferences`    | Files that import a given symbol name                                                   |
+| `buildContext`      | Context pack (explain/implement/debug/recent-changes)                                   |
+| `searchCode`        | Hybrid lexical + vector search                                                          |
 
 - [x] Service layer with shared types (`ResolvedRepoRef`, `FileResult`, `SymbolMatch`, `ImportRef`)
 - [x] All operations delegated from both MCP tools and web API
@@ -191,10 +193,11 @@ Wires retrieval to the MCP SDK. Delegates to the shared service layer.
 **Tasks:**
 
 - [x] MCP server factory: stdio + streamable HTTP transport via `MCP_TRANSPORT` env var
+- [x] Language auto-detection: when `MCP_LANGUAGES` is unset, scans CWD for manifest files to auto-populate the language filter; `MCP_LANGUAGE_THRESHOLD` (default 10, 0 = disabled) controls repo filtering strictness
 - [x] 7 tool registrations with Zod input schemas and handlers
 - [x] Resources: `reporelay://{repo}/{ref}/{path+}` (file content), `reporelay://{repo}/{ref}/tree` (dir tree)
 - [x] Prompts: `explain-library`, `implement-feature`, `debug-issue`
-- [x] **Tests:** `mcp/tools.test.ts` (9), `mcp/resources.test.ts` (5), `mcp/prompts.test.ts` (5), `mcp/mcp.integration.test.ts` (12) ✅
+- [x] **Tests:** `mcp/tools.test.ts`, `mcp/resources.test.ts`, `mcp/prompts.test.ts`, `mcp/mcp.integration.test.ts` ✅
 
 ### Step 9 — `src/web/` (Fastify API routes)
 
@@ -249,7 +252,7 @@ POST   /api/repos/:name/context                       Build context pack
 - [x] Angular UI types derived from generated spec via `@api/*` tsconfig path alias
 - [x] Backend `IndexingStage` type derived from generated spec (single source of truth)
 - [x] Request validation migrated from inline Zod to generated schemas (`createRepoBodySchema`, `syncBodySchema`, `contextBodySchema`)
-- [x] **Tests:** `web/api.integration.test.ts` (19) ✅
+- [x] **Tests:** `web/api.integration.test.ts` ✅
 
 ### Step 10 — `src/worker/` (pg-boss handler, entrypoint)
 
@@ -280,7 +283,7 @@ Wires queue → indexing pipeline. Thin glue code.
 - [x] Semver detection on upsert
 - [x] Duplicate-ref guard
 - [x] `indexedAt` set atomically in pipeline
-- [x] **Tests:** `worker/handler.test.ts` (14) ✅
+- [x] **Tests:** `worker/handler.test.ts` ✅
 
 ### Step 11 — `docker-compose.yml` + `.env.example` + Dockerfile + entrypoints
 
@@ -288,7 +291,7 @@ Production-ready container setup.
 
 - [x] `docker-compose.yml`: ParadeDB (Postgres), worker service, web API service
 - [x] `Dockerfile`: Multi-stage Node 22 build (base → deps → app)
-- [x] `.env.example`: all 12 config vars with defaults and comments, plus `GIT_TOKEN_<HOST>` / `GIT_USER_<HOST>` credential patterns
+- [x] `.env.example`: all 13 config vars with defaults and comments, plus `GIT_TOKEN_<HOST>` / `GIT_USER_<HOST>` credential patterns
 - [x] `src/web/main.ts`: standalone web server entrypoint with PG subscriber
 - [x] `src/mcp/main.ts`: standalone MCP server entrypoint
 - [x] `scripts/dev.sh`: starts Postgres + worker + web for local development
@@ -372,25 +375,6 @@ ui/
 Full-flow integration tests that exercise the entire pipeline from git sync
 through to retrieval.
 
-- [x] `full-flow.integration.test.ts` (23) — complete indexing + search flow
-- [x] `git-worktree-pipeline.integration.test.ts` (7) — worktree checkout + pipeline
-- [x] `ollama-embedding.integration.test.ts` (23) — Ollama embedding provider integration
-
----
-
-## Test Counts
-
-| Module    | Unit    | Integration | Total   |
-| --------- | ------- | ----------- | ------- |
-| core      | 13      | —           | 13      |
-| git       | 59      | —           | 59      |
-| parser    | 62      | —           | 62      |
-| storage   | 6       | 41          | 47      |
-| indexer   | 49      | 21          | 70      |
-| retrieval | 23      | 8           | 31      |
-| services  | —       | —           | —       |
-| mcp       | 19      | 12          | 31      |
-| web       | —       | 19          | 19      |
-| worker    | 14      | —           | 14      |
-| e2e       | —       | 53          | 53      |
-| **Total** | **245** | **154**     | **399** |
+- [x] `full-flow.integration.test.ts` — complete indexing + search flow
+- [x] `git-worktree-pipeline.integration.test.ts` — worktree checkout + pipeline
+- [x] `ollama-embedding.integration.test.ts` — Ollama embedding provider integration

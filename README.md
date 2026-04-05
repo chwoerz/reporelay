@@ -16,7 +16,7 @@
   <img alt="Node.js 22+" src="https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=white">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-Native-8b5cf6">
   <img alt="Postgres" src="https://img.shields.io/badge/Postgres-ParadeDB-4169E1?logo=postgresql&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-399_passing-22c55e">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-passing-22c55e">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-blue">
 </p>
 
@@ -147,6 +147,38 @@ Or use the admin dashboard at `http://localhost:4200`.
 
 See the [full documentation](https://chwoerz.github.io/reporelay/guide/mcp-integration) for OpenCode, HTTP transport, and other client configurations.
 
+### Language Auto-Detection
+
+When `MCP_LANGUAGES` is not set, the MCP server automatically detects the host project's language by scanning the working directory for well-known manifest files:
+
+| Manifest File                   | Detected Languages     |
+| ------------------------------- | ---------------------- |
+| `package.json`, `tsconfig.json` | typescript, javascript |
+| `Cargo.toml`                    | rust                   |
+| `go.mod`                        | go                     |
+| `pyproject.toml`, `setup.py`    | python                 |
+| `pom.xml`, `build.gradle(.kts)` | java, kotlin           |
+| `CMakeLists.txt`, `Makefile`    | c, cpp                 |
+
+Detected languages are used to filter which repos are served — only repos whose `language_stats` contain a matching language above the threshold are included.
+
+**`MCP_LANGUAGE_THRESHOLD`** (default: `10`) controls the minimum percentage a language must represent in a repo ref's file breakdown. Set to `0` to disable repo filtering entirely.
+
+```json
+{
+  "mcpServers": {
+    "reporelay": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp/main.ts"],
+      "env": {
+        "DATABASE_URL": "postgresql://reporelay:reporelay@localhost:5432/reporelay",
+        "MCP_LANGUAGE_THRESHOLD": "0"
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## Documentation
@@ -165,7 +197,7 @@ Full documentation is available at the **[RepoRelay docs site](https://chwoerz.g
 
 ## Testing
 
-**399 tests** (245 unit + 154 integration) covering every module.
+Comprehensive test suite (unit + integration) covering every module.
 
 ```bash
 pnpm test              # All tests

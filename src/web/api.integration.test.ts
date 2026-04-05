@@ -27,6 +27,7 @@ const mockConfig: Config = {
   WEB_PORT: 3001,
   GIT_MIRRORS_DIR: "/tmp/reporelay-test-mirrors",
   GIT_WORKTREES_DIR: "/tmp/reporelay-test-worktrees",
+  MCP_LANGUAGE_THRESHOLD: 10,
   LOG_LEVEL: "fatal",
 };
 

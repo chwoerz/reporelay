@@ -21,6 +21,8 @@ import { type HybridSearchOptions, searchHybrid } from "../retrieval/index.js";
 import { buildContextPack, type ContextPackInput, formatContextPack } from "../retrieval/index.js";
 import { readFileFromMirror } from "../git/git-sync.js";
 
+import type { LanguageStats } from "../core/types.js";
+
 // ── Shared types ──
 
 export interface ResolvedRepoRef {
@@ -74,21 +76,64 @@ export interface RepoWithRefs {
   refs: Awaited<ReturnType<RepoRefRepository["findByRepoId"]>>;
 }
 
+/** Default minimum percentage for a language to count as a match. */
+const DEFAULT_LANGUAGE_THRESHOLD = 10;
+
 /**
- * List all repos together with their refs.
- * Eliminates the duplicated "list all repos then fetch refs for each" loop
- * that previously appeared in tools, resources, and web routes.
+ * Check whether a ref's language_stats contain at least one of the given
+ * languages at or above the threshold percentage.
  */
-export async function listReposWithRefs(db: Db): Promise<RepoWithRefs[]> {
+function refMatchesLanguages(
+  stats: LanguageStats | null | undefined,
+  languages: string[],
+  threshold: number,
+): boolean {
+  if (!stats) return false;
+  return languages.some((lang) => (stats[lang as keyof LanguageStats] ?? 0) >= threshold);
+}
+
+/**
+ * List all repos together with their refs, optionally filtered by language.
+ *
+ * When `languages` is provided and `threshold` is greater than 0, only repos
+ * that have at least one ref whose `language_stats` contains a matching
+ * language at or above `threshold`% are returned. Refs that don't meet
+ * the threshold are still included on qualifying repos (so the caller
+ * sees the full picture).
+ *
+ * When `threshold` is 0, language-based repo filtering is disabled and
+ * all repos are returned regardless of `languages`.
+ *
+ * @param db        - Drizzle DB instance
+ * @param languages - optional language filter (e.g. ["typescript", "javascript"])
+ * @param threshold - minimum percentage in language_stats to qualify (default 10, 0 = disabled)
+ */
+export async function listReposWithRefs(
+  db: Db,
+  languages?: string[],
+  threshold?: number,
+): Promise<RepoWithRefs[]> {
   const repoRepo = new RepoRepository(db);
   const refRepo = new RepoRefRepository(db);
   const repos = await repoRepo.listAll();
 
-  return Promise.all(
+  const entries = await Promise.all(
     repos.map(async (repo) => ({
       repo,
       refs: await refRepo.findByRepoId(repo.id),
     })),
+  );
+
+  const pct = threshold ?? DEFAULT_LANGUAGE_THRESHOLD;
+
+  // Threshold 0 disables filtering — return everything
+  if (pct === 0) return entries;
+
+  // No language filter → return everything (existing behavior)
+  if (!languages || languages.length === 0) return entries;
+
+  return entries.filter(({ refs }) =>
+    refs.some((r) => refMatchesLanguages(r.languageStats as LanguageStats | null, languages, pct)),
   );
 }
 
