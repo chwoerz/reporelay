@@ -5,8 +5,9 @@ export default withMermaid(
   defineConfig({
     title: "RepoRelay",
     description: "Self-hosted, MCP-native code context engine for private repositories",
+    base: "/reporelay/",
 
-    head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
+    head: [["link", { rel: "icon", type: "image/svg+xml", href: "/reporelay/logo.svg" }]],
 
     vite: {
       optimizeDeps: {
@@ -22,7 +23,7 @@ export default withMermaid(
         { text: "Reference", link: "/reference/api" },
         {
           text: "GitHub",
-          link: "https://github.com/your-org/reporelay",
+          link: "https://github.com/chwoerz/reporelay",
         },
       ],
 
@@ -75,7 +76,7 @@ export default withMermaid(
       socialLinks: [
         {
           icon: "github",
-          link: "https://github.com/your-org/reporelay",
+          link: "https://github.com/chwoerz/reporelay",
         },
       ],
 
