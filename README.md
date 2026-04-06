@@ -22,18 +22,20 @@
 
 ---
 
-**RepoRelay** is a self-hosted code context engine that turns any number of Git repositories — public or private — into a deeply indexed, version-aware knowledge base queryable by any LLM.
+**RepoRelay** is a self-hosted code context engine for [MCP](https://modelcontextprotocol.io).
 
-This is not `git grep`. RepoRelay parses every file with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), extracts symbols, imports, and documentation, chunks the code with respect to function boundaries, embeds the chunks, and stores everything in a hybrid search index (BM25 full-text + vector similarity). Each branch and tag gets its own versioned snapshot — query any point in your project's history with semver ranges like `^1.2` or `~3.0`.
+1. [**Add repositories**](https://chwoerz.github.io/reporelay/guide/getting-started) from any source — GitHub, GitLab, Bitbucket, on-premise, or local disk
+2. [**Index the refs you need**](https://chwoerz.github.io/reporelay/guide/indexing-pipeline) — pick the branches and tags that matter; each gets its own versioned snapshot
+3. [**Use them everywhere**](https://chwoerz.github.io/reporelay/guide/mcp-integration) — every indexed repo is instantly available as MCP tools in Claude Desktop, Cursor, Windsurf, OpenCode, or any other MCP-capable client
 
-Register as many repositories as you need. Every indexed repo is instantly available through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Point your MCP-capable client (Claude Desktop, Cursor, Windsurf, OpenCode) at RepoRelay, and your LLM gains deep, semantic understanding across all your codebases at once. Because it's self-hosted, private repositories never leave your infrastructure.
+Manage everything through the [REST API](https://chwoerz.github.io/reporelay/reference/api) or the [admin dashboard](https://chwoerz.github.io/reporelay/guide/admin-dashboard). Register once, query from any project in any editor. RepoRelay parses files with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), extracts symbols and imports, and stores everything in a hybrid search index (BM25 + pgvector). Private repos never leave your infrastructure.
 
 ---
 
 ## Highlights
 
 |             | Feature                                             | Description                                                                                     |
-| :---------- | :-------------------------------------------------- |:------------------------------------------------------------------------------------------------|
+| :---------- | :-------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
 | **Repos**   | Unlimited Repositories                              | Register repos from any Git host — GitHub, GitLab, Bitbucket, on-premise, or local paths        |
 | **Search**  | Hybrid Search                                       | BM25 full-text (ParadeDB) + vector similarity (pgvector), fused via Reciprocal Rank Fusion      |
 | **Parse**   | Deep Code Understanding                             | tree-sitter parsing across 9 languages extracts symbols, imports, signatures, and doc comments  |
