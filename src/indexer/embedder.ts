@@ -9,7 +9,6 @@
  * detect its native embedding dimension and validates it against the DB
  * schema's fixed column width ({@link DB_EMBEDDING_DIMENSIONS}).
  */
-import { type EmbeddingProvider } from "../core/types.js";
 import { estimateTokens } from "./chunker.js";
 
 // ── Interface ──
@@ -177,14 +176,6 @@ export async function embedInBatches(
 
 // ── Factory ──
 
-export function createEmbedder(
-  provider: EmbeddingProvider,
-  options: OllamaEmbedderOptions,
-): Embedder {
-  switch (provider) {
-    case "ollama":
-      return new OllamaEmbedder(options);
-    default:
-      throw new Error(`Unknown embedder provider: ${provider}`);
-  }
+export function createEmbedder(options: OllamaEmbedderOptions): Embedder {
+  return new OllamaEmbedder(options);
 }

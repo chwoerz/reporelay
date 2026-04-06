@@ -102,11 +102,6 @@ export interface SearchResult {
   symbolName?: string;
 }
 
-// ── Embedding provider ──
-
-export const EmbeddingProviders = ["ollama"] as const;
-export type EmbeddingProvider = (typeof EmbeddingProviders)[number];
-
 // ── Context pack strategy ──
 
 export const ContextStrategies = ["explain", "implement", "debug", "recent-changes"] as const;

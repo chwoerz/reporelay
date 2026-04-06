@@ -53,7 +53,7 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapR
   }
 
   const db = createDb(sql);
-  const embedder = createEmbedder(config.EMBEDDING_PROVIDER, {
+  const embedder = createEmbedder({
     url: config.EMBEDDING_URL,
     model: config.EMBEDDING_MODEL,
   });

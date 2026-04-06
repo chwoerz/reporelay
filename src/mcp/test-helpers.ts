@@ -14,7 +14,6 @@ export function makeMcpDeps(): McpDeps {
     embedder: createMockEmbedder(),
     config: {
       DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-      EMBEDDING_PROVIDER: "ollama",
       EMBEDDING_URL: "http://localhost:11434",
       EMBEDDING_MODEL: "nomic-embed-text",
       EMBEDDING_BATCH_SIZE: 64,

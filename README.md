@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.png">
-    <img alt="RepoRelay — Self-hosted, MCP-native code context engine" src="assets/banner-dark.png" width="600">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/logo-text-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo/logo-text-light.png">
+    <img alt="RepoRelay — Self-hosted, MCP-native code context engine" src="assets/logo/logo-text-dark.png" width="600">
   </picture>
 </p>
 
@@ -22,25 +22,29 @@
 
 ---
 
-**RepoRelay** is a self-hosted code context engine that makes any Git repository — public or private — deeply searchable and contextually available to any LLM. It indexes your repos — code, docs, tests, examples — and exposes the knowledge through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io).
+**RepoRelay** is a self-hosted code context engine that turns any number of Git repositories — public or private — into a deeply indexed, version-aware knowledge base queryable by any LLM.
 
-Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, and your LLM instantly gains deep understanding of your entire codebase. Because it's self-hosted, even private repositories stay on your infrastructure.
+This is not `git grep`. RepoRelay parses every file with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), extracts symbols, imports, and documentation, chunks the code with respect to function boundaries, embeds the chunks, and stores everything in a hybrid search index (BM25 full-text + vector similarity). Each branch and tag gets its own versioned snapshot — query any point in your project's history with semver ranges like `^1.2` or `~3.0`.
+
+Register as many repositories as you need. Every indexed repo is instantly available through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Point your MCP-capable client (Claude Desktop, Cursor, Windsurf, OpenCode) at RepoRelay, and your LLM gains deep, semantic understanding across all your codebases at once. Because it's self-hosted, private repositories never leave your infrastructure.
 
 ---
 
 ## Highlights
 
-|             | Feature                    | Description                                                                                     |
-| :---------- | :------------------------- | :---------------------------------------------------------------------------------------------- |
-| **Search**  | Hybrid Search              | BM25 full-text (ParadeDB) + vector similarity (pgvector), fused via Reciprocal Rank Fusion      |
-| **Parse**   | Deep Code Understanding    | tree-sitter parsing across 9 languages extracts symbols, imports, signatures, and doc comments  |
-| **Index**   | Full-Index + SHA-256 Dedup | Every ref indexes all files via `git ls-tree`; SHA-256 content addressing skips unchanged files |
-| **MCP**     | MCP-Native                 | 7 tools, 2 resources, 3 prompts — works with any MCP host                                       |
-| **Version** | Semver-Aware               | Query tags with `^1.2`, `~1.0`, or `2.x` — RepoRelay resolves them automatically                |
-| **Deploy**  | Self-Hosted                | Your code stays on your infrastructure. Postgres is the only runtime dependency                 |
-| **UI**      | REST API + Admin Dashboard | Fastify REST API (18 routes) + Angular 21 admin dashboard                                       |
-| **Embed**   | Ollama                     | Ollama with Metal GPU acceleration for fast local embeddings                                    |
-| **Chunk**   | Symbol-Aware Chunking      | Respects function boundaries with overlap windows — never cuts a symbol in half                 |
+|             | Feature                                             | Description                                                                                     |
+| :---------- | :-------------------------------------------------- |:------------------------------------------------------------------------------------------------|
+| **Repos**   | Unlimited Repositories                              | Register repos from any Git host — GitHub, GitLab, Bitbucket, on-premise, or local paths        |
+| **Search**  | Hybrid Search                                       | BM25 full-text (ParadeDB) + vector similarity (pgvector), fused via Reciprocal Rank Fusion      |
+| **Parse**   | Deep Code Understanding                             | tree-sitter parsing across 9 languages extracts symbols, imports, signatures, and doc comments  |
+| **Index**   | Full-Index + SHA-256 Dedup                          | Every ref indexes all files via `git ls-tree`; SHA-256 content addressing skips unchanged files |
+| **MCP**     | MCP-Native                                          | 7 tools, 2 resources, 3 prompts — works with any MCP host                                       |
+| **Version** | Versioned Snapshots                                 | Every branch and tag is indexed independently; query with semver ranges like `^1.2` or `~3.0`   |
+| **Deploy**  | Self-Hosted                                         | Your code stays on your infrastructure. Postgres is the only runtime dependency                 |
+| **UI**      | REST API + Admin Dashboard                          | Fastify REST API (18 routes) + Angular 21 admin dashboard                                       |
+| **Embed**   | Ollama                                              | Ollama with Metal GPU acceleration for fast local embeddings                                    |
+| **Chunk**   | Symbol-Aware Chunking                               | Respects function boundaries with overlap windows — never cuts a symbol in half                 |
+| **Lang**    | [Language Auto-Detection](#language-auto-detection) | Detects your project's languages from manifest files and filters relevant repos automatically   |
 
 <p align="center">
   <img src="assets/icons/typescript-original.svg" width="38" alt="TypeScript"/>&nbsp;&nbsp;
@@ -59,7 +63,77 @@ Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, a
 
 ## Quick Start
 
-### Prerequisites
+<details>
+<summary><h3>Option A: Docker Compose (recommended)</h3></summary>
+
+Run the entire stack — Postgres, worker, REST API, MCP server, and admin UI — with a single command. No Node.js installation required.
+
+#### Prerequisites
+
+| Requirement | Version |
+| ----------- | ------- |
+| Docker      | Latest  |
+
+#### 1. Clone and configure
+
+```bash
+git clone https://github.com/chwoerz/reporelay.git
+cd reporelay
+cp .env.example .env
+```
+
+Edit `.env` if you need to change the embedding model or Git tokens for private repos. The defaults work out of the box if you have [Ollama](https://ollama.com/) running locally.
+
+#### 2. Start everything
+
+```bash
+docker compose up -d
+```
+
+This builds and starts all 5 services:
+
+| Service    | Port   | Description                                |
+| ---------- | ------ | ------------------------------------------ |
+| `postgres` | `5432` | ParadeDB (Postgres + pgvector + pg_search) |
+| `worker`   | —      | Background indexing worker (pg-boss)       |
+| `web`      | `3001` | REST API + Swagger UI (`/docs`)            |
+| `mcp`      | `3000` | MCP server (HTTP transport)                |
+| `ui`       | `80`   | Angular admin dashboard                    |
+
+The worker runs database migrations automatically on first startup.
+
+#### 3. Index your repos
+
+```bash
+# Register a remote repo
+curl -sS -X POST http://localhost:3001/api/repos \
+  -H 'content-type: application/json' \
+  -d '{"name":"my-lib","remoteUrl":"https://github.com/org/my-lib.git"}'
+
+# Trigger indexing for a specific branch
+curl -sS -X POST http://localhost:3001/api/repos/my-lib/sync \
+  -H 'content-type: application/json' \
+  -d '{"ref":"main"}'
+
+# Index a tagged release — each version is stored independently
+curl -sS -X POST http://localhost:3001/api/repos/my-lib/sync \
+  -H 'content-type: application/json' \
+  -d '{"ref":"v2.0.0"}'
+
+# Search across all indexed repos and versions
+curl -sS 'http://localhost:3001/api/search?q=handleAuth'
+```
+
+Or use the admin dashboard at `http://localhost` and the Swagger UI at `http://localhost:3001/docs`.
+
+</details>
+
+<details>
+<summary><h3>Option B: Local Development</h3></summary>
+
+Run services directly with Node.js for a faster dev loop with hot-reload.
+
+#### Prerequisites
 
 | Requirement | Version |
 | ----------- | ------- |
@@ -67,7 +141,7 @@ Point your MCP-capable client (Claude Desktop, Cursor, Windsurf) at RepoRelay, a
 | pnpm        | 9+      |
 | Docker      | Latest  |
 
-### 1. Clone and install
+#### 1. Clone and install
 
 ```bash
 git clone https://github.com/chwoerz/reporelay.git
@@ -75,7 +149,7 @@ cd reporelay
 pnpm install
 ```
 
-### 2. Start Postgres
+#### 2. Start Postgres
 
 ```bash
 docker compose up -d postgres
@@ -83,14 +157,14 @@ docker compose up -d postgres
 
 This starts [ParadeDB](https://www.paradedb.com/) (Postgres with pgvector + pg_search).
 
-### 3. Configure environment
+#### 3. Configure environment
 
 ```bash
 cp .env.example .env
 # Defaults work for local development — no edits needed
 ```
 
-### 4. Start services
+#### 4. Start services
 
 ```bash
 # All-in-one dev script (Postgres + worker + web API)
@@ -106,24 +180,59 @@ pnpm dev:ui       # Angular dashboard on :4200
 
 The worker bootstraps the database on first startup (extensions, migrations, BM25 index).
 
-### 5. Index your first repo
+#### 5. Index your repos
 
 ```bash
-# Register a repo
+# Register a local repo
 curl -sS -X POST http://localhost:3001/api/repos \
   -H 'content-type: application/json' \
-  -d '{"name":"my-repo","localPath":"/absolute/path/to/my-repo"}'
+  -d '{"name":"my-app","localPath":"/absolute/path/to/my-app"}'
 
-# Trigger indexing
-curl -sS -X POST http://localhost:3001/api/repos/my-repo/sync \
+# Register a remote repo
+curl -sS -X POST http://localhost:3001/api/repos \
+  -H 'content-type: application/json' \
+  -d '{"name":"my-lib","remoteUrl":"https://github.com/org/my-lib.git"}'
+
+# Trigger indexing for a specific branch
+curl -sS -X POST http://localhost:3001/api/repos/my-app/sync \
   -H 'content-type: application/json' \
   -d '{"ref":"main"}'
+
+# Index a tagged release — each version is stored independently
+curl -sS -X POST http://localhost:3001/api/repos/my-lib/sync \
+  -H 'content-type: application/json' \
+  -d '{"ref":"v2.0.0"}'
+
+# Search across all indexed repos and versions
+curl -sS 'http://localhost:3001/api/search?q=handleAuth'
 
 # Check status
 curl -sS http://localhost:3001/api/repos
 ```
 
 Or use the admin dashboard at `http://localhost:4200`.
+
+</details>
+
+### Supported Git Hosts
+
+RepoRelay works with **any Git repository** accessible over HTTPS or on the local filesystem. There is no vendor lock-in — your repos can come from any combination of:
+
+- **GitHub** (github.com and GitHub Enterprise)
+- **GitLab** (gitlab.com and self-managed)
+- **Bitbucket** (Cloud and Data Center)
+- **Azure DevOps**
+- **Gitea / Forgejo**
+- **Any on-premise Git server** (Gerrit, cgit, etc.)
+- **Local repositories** on disk
+
+For private repos, set a `GIT_TOKEN_<HOST>` environment variable and RepoRelay handles authentication automatically. Host-specific username defaults are built-in for GitHub, GitLab, and Bitbucket — any other host uses `GIT_USER_<HOST>` or falls back to `oauth2`.
+
+```bash
+# Example: authenticate with GitHub and a self-hosted GitLab
+GIT_TOKEN_GITHUB_COM=ghp_xxxxxxxxxxxx
+GIT_TOKEN_GITLAB_INTERNAL_CORP_COM=glpat-xxxxxxxxxxxx
+```
 
 ---
 

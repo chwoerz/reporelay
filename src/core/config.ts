@@ -3,7 +3,7 @@
  * Validated via Zod schema on startup.
  */
 import { z } from "zod/v4";
-import { EmbeddingProviders, Languages } from "./types.js";
+import { Languages } from "./types.js";
 
 // ── Schema ──
 
@@ -12,7 +12,6 @@ export const configSchema = z.object({
   DATABASE_URL: z.string().default("postgresql://reporelay:reporelay@localhost:5432/reporelay"),
 
   // Embedding
-  EMBEDDING_PROVIDER: z.enum(EmbeddingProviders).default("ollama"),
   EMBEDDING_URL: z.url().default("http://localhost:11434"),
   EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
   EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),

@@ -9,4 +9,13 @@ dist
 ui/node_modules
 ui/dist
 ui/.angular
-
+ui/e2e
+k8s/
+docs/
+test/
+.vitepress/
+.github/
+AGENTS.md
+PLAN.md
+README.md
+vitest.config.ts

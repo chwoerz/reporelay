@@ -5,7 +5,6 @@ describe("Config", () => {
   it("loads defaults when no .env is present", () => {
     const config = loadConfig({});
     expect(config.DATABASE_URL).toBe("postgresql://reporelay:reporelay@localhost:5432/reporelay");
-    expect(config.EMBEDDING_PROVIDER).toBe("ollama");
     expect(config.MCP_SERVER_PORT).toBe(3000);
     expect(config.WEB_PORT).toBe(3001);
     expect(config.LOG_LEVEL).toBe("info");
@@ -25,20 +24,12 @@ describe("Config", () => {
     expect(config.LOG_LEVEL).toBe("debug");
     expect(config.GIT_MIRRORS_DIR).toBe("/tmp/mirrors");
     // non-overridden values keep defaults
-    expect(config.EMBEDDING_PROVIDER).toBe("ollama");
   });
 
   it("validates required fields and throws on invalid config", () => {
     expect(() => loadConfig({ MCP_SERVER_PORT: "-1" })).toThrow();
 
     expect(() => loadConfig({ LOG_LEVEL: "banana" })).toThrow();
-  });
-
-  it("parses EMBEDDING_PROVIDER as enum (ollama only)", () => {
-    expect(loadConfig({ EMBEDDING_PROVIDER: "ollama" }).EMBEDDING_PROVIDER).toBe("ollama");
-    expect(() => loadConfig({ EMBEDDING_PROVIDER: "tei" })).toThrow();
-    expect(() => loadConfig({ EMBEDDING_PROVIDER: "openai" })).toThrow();
-    expect(() => loadConfig({ EMBEDDING_PROVIDER: "mock" })).toThrow();
   });
 
   it("defaults MCP_SERVER_PORT to 3000", () => {

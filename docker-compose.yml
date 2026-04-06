@@ -16,17 +16,16 @@ services:
       timeout: 3s
       retries: 10
 
-  # ── Worker (pg-boss index job handler) ──
+  # ── Worker (pg-boss index job handler — sole migration owner) ──
   worker:
     build: .
-    command: ["pnpm", "tsx", "src/worker/index.ts"]
+    command: ["node", "dist/src/worker/index.js"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-ollama}
-      EMBEDDING_URL: ${EMBEDDING_URL:-http://host.docker.internal:11434}
+      EMBEDDING_URL: http://host.docker.internal:11434
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
       GIT_MIRRORS_DIR: /data/mirrors
@@ -35,10 +34,10 @@ services:
     volumes:
       - gitdata:/data
 
-  # ── Web API (Fastify) ──
+  # ── Web API (Fastify REST API + Swagger UI) ──
   web:
     build: .
-    command: ["pnpm", "tsx", "src/web/main.ts"]
+    command: ["node", "dist/src/web/main.js"]
     ports:
       - "3001:3001"
     depends_on:
@@ -48,8 +47,41 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+      EMBEDDING_URL: http://host.docker.internal:11434
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
       WEB_PORT: 3001
       LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  # ── MCP Server (Model Context Protocol over HTTP) ──
+  mcp:
+    build: .
+    command: ["node", "dist/src/mcp/main.js"]
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+      EMBEDDING_URL: http://host.docker.internal:11434
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      MCP_SERVER_PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  # ── UI (Angular admin dashboard served by nginx) ──
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      web:
+        condition: service_started
 
 volumes:
   pgdata:

@@ -148,10 +148,10 @@ describe("OllamaEmbedder (live)", () => {
 
   // ── Factory function ──
 
-  it("createEmbedder with 'ollama' returns a working OllamaEmbedder", async () => {
+  it("createEmbedder returns a working OllamaEmbedder", async () => {
     if (!available) return;
 
-    const embedder = createEmbedder("ollama", {
+    const embedder = createEmbedder({
       url: OLLAMA_URL,
       model: "nomic-embed-text",
     });

@@ -1,0 +1,10 @@
+node_modules
+dist
+.angular
+.vscode
+e2e
+*.log
+.DS_Store
+DESIGN.md
+README.md
+playwright.config.ts

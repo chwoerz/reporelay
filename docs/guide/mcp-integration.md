@@ -44,6 +44,19 @@ pnpm dev:proxy
 
 ### How Language Injection Works
 
+The proxy detects your project's languages by scanning the working directory for well-known manifest files:
+
+| Manifest File                   | Detected Languages     |
+| ------------------------------- | ---------------------- |
+| `package.json`, `tsconfig.json` | typescript, javascript |
+| `Cargo.toml`                    | rust                   |
+| `go.mod`                        | go                     |
+| `pyproject.toml`, `setup.py`    | python                 |
+| `pom.xml`, `build.gradle(.kts)` | java, kotlin           |
+| `CMakeLists.txt`, `Makefile`    | c, cpp                 |
+
+Detected languages are used to filter which repos are served — only repos whose `language_stats` contain a matching language above the threshold are included.
+
 The proxy injects detected languages into 4 language-aware tools: `search_code`, `get_symbol`, `find`, and `list_repos`. Injection only happens when:
 
 - The tool is one of the 4 language-aware tools

@@ -19,9 +19,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Resolve the drizzle migrations folder relative to project root. */
 function getMigrationsFolder(): string {
-  // From src/storage/schema/migrate.ts → ../../../drizzle (project root)
-  // From dist/storage/schema/migrate.js → ../../../drizzle (project root)
-  return path.resolve(__dirname, "..", "..", "..", "drizzle");
+  // From src/storage/schema/migrate.ts  → ../../../drizzle  (3 levels to project root)
+  // From dist/src/storage/schema/migrate.js → ../../../../drizzle (4 levels to project root)
+  const levels = __dirname.includes(path.join("dist", "src")) ? 4 : 3;
+  const segments = Array.from<string>({ length: levels }).fill("..");
+  return path.resolve(__dirname, ...segments, "drizzle");
 }
 
 /**

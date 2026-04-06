@@ -7,8 +7,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | Variable                 | Default                                                     | Description                                                |
 | :----------------------- | :---------------------------------------------------------- | :--------------------------------------------------------- |
 | `DATABASE_URL`           | `postgresql://reporelay:reporelay@localhost:5432/reporelay` | Postgres connection string                                 |
-| `EMBEDDING_PROVIDER`     | `ollama`                                                    | Embedding provider (`ollama`)                              |
-| `EMBEDDING_URL`          | `http://localhost:11434`                                    | Embedding API endpoint                                     |
+| `EMBEDDING_URL`          | `http://localhost:11434`                                    | Embedding API endpoint (Ollama)                            |
 | `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                       |
 | `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                          |
 | `MCP_SERVER_PORT`        | `3000`                                                      | MCP HTTP server port                                       |
