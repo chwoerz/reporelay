@@ -4,6 +4,7 @@ x-shared-env: &shared-env
   EMBEDDING_URL: http://host.docker.internal:11434
   EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
   GIT_MIRRORS_DIR: /data/mirrors
+  GIT_TOKEN_GITHUB_COM: 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
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
@@ -53,7 +54,7 @@ services:
       <<: *shared-env
       WEB_PORT: 3001
     volumes:
-      - gitdata:/data:ro
+      - gitdata:/data
 
   # ── MCP Server (Model Context Protocol over HTTP) ──
   mcp:

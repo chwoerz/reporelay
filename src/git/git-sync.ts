@@ -23,6 +23,39 @@ function isolatedGit(baseDir?: string): ReturnType<typeof simpleGit> {
   return simpleGit(opts).env({ GIT_TERMINAL_PROMPT: "0", GIT_ASKPASS: "" });
 }
 
+// ── Auth helper for partial-clone operations ──
+
+/**
+ * Run a git operation with the authenticated remote URL temporarily set.
+ *
+ * Partial clones (--filter=blob:none) lazily fetch blobs from the
+ * "promisor remote" when worktree checkout, git-show, or ls-tree needs
+ * actual file content.  The mirror's stored remote URL has credentials
+ * stripped, so these lazy fetches fail with "terminal prompts disabled".
+ *
+ * This helper temporarily swaps in the authenticated URL (exactly like
+ * `fetchExistingMirror` does), runs the operation, then restores the
+ * clean URL.  For local repos (no auth) or already-available objects
+ * the callback just runs directly.
+ */
+async function withAuth<T>(
+  mirrorPath: string,
+  remoteUrl: string | undefined,
+  fn: (git: ReturnType<typeof simpleGit>) => Promise<T>,
+): Promise<T> {
+  const git = isolatedGit(mirrorPath);
+  const auth = remoteUrl ? resolveGitAuth(remoteUrl) : null;
+
+  if (!auth) return fn(git);
+
+  await git.raw(["remote", "set-url", "origin", auth.authenticatedUrl]);
+  try {
+    return await fn(git);
+  } finally {
+    await git.raw(["remote", "set-url", "origin", auth.originalUrl]);
+  }
+}
+
 // ── Mirror clone / fetch ──
 
 /**
@@ -79,20 +112,7 @@ async function fetchExistingMirror(
   mirrorPath: string,
   auth: ReturnType<typeof resolveGitAuth>,
 ): Promise<void> {
-  const git = isolatedGit(mirrorPath);
-  if (!auth) {
-    await git.fetch(["--prune"]);
-    return;
-  }
-
-  // Temporarily set the authenticated URL, fetch, then restore the
-  // clean URL so that tokens are never left on disk.
-  await git.raw(["remote", "set-url", "origin", auth.authenticatedUrl]);
-  try {
-    await git.fetch(["--prune"]);
-  } finally {
-    await git.raw(["remote", "set-url", "origin", auth.originalUrl]);
-  }
+  await withAuth(mirrorPath, auth?.originalUrl, (git) => git.fetch(["--prune"]));
 }
 
 /**
@@ -178,18 +198,25 @@ export async function resolveCommitSha(mirrorPath: string, ref: string): Promise
 
 /**
  * Check out a worktree at a specific commit SHA.
+ *
+ * For partial clones, the worktree add may trigger lazy blob fetches
+ * from the promisor remote — `remoteUrl` is used to resolve credentials
+ * for the duration of the operation.
+ *
  * Returns the worktree path. Caller must call `cleanupWorktree()` when done.
  */
 export async function checkoutWorktree(
   mirrorPath: string,
   worktreesDir: string,
   commitSha: string,
+  remoteUrl?: string,
 ): Promise<string> {
   const absWorktreesDir = resolve(worktreesDir);
   await mkdir(absWorktreesDir, { recursive: true });
   const worktreePath = join(absWorktreesDir, `wt-${randomUUID()}`);
-  const git = isolatedGit(mirrorPath);
-  await git.raw(["worktree", "add", "--detach", worktreePath, commitSha]);
+  await withAuth(mirrorPath, remoteUrl, (git) =>
+    git.raw(["worktree", "add", "--detach", worktreePath, commitSha]),
+  );
   return worktreePath;
 }
 
@@ -270,20 +297,23 @@ export async function listGitRefs(mirrorPath: string): Promise<GitRefs> {
 /**
  * Read raw file content from a bare mirror at a specific commit.
  *
- * Uses `git show <commitSha>:<path>`. Returns `null` if the mirror
- * directory doesn't exist, the commit is unknown, or the path doesn't
- * exist at that commit — callers should fall back to chunk-based content.
+ * Uses `git show <commitSha>:<path>`. For partial clones this may
+ * trigger a lazy blob fetch — `remoteUrl` is used to resolve credentials.
+ *
+ * Returns `null` if the mirror directory doesn't exist, the commit is
+ * unknown, or the path doesn't exist at that commit — callers should
+ * fall back to chunk-based content.
  */
 export async function readFileFromMirror(
   mirrorPath: string,
   commitSha: string,
   filePath: string,
+  remoteUrl?: string,
 ): Promise<string | null> {
   if (!(await exists(mirrorPath))) return null;
 
   try {
-    const git = isolatedGit(mirrorPath);
-    return await git.show([`${commitSha}:${filePath}`]);
+    return await withAuth(mirrorPath, remoteUrl, (git) => git.show([`${commitSha}:${filePath}`]));
   } catch {
     return null;
   }

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from "@angular/core";
+import { Component, effect, inject, signal, computed } from "@angular/core";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -35,14 +35,33 @@ export class SymbolExplorerComponent {
   selectedSymbolName = signal("");
   symbolDetail = signal<SymbolLookup | null>(null);
 
+  constructor() {
+    effect(() => {
+      const kind = this.kind();
+      /* Skip the initial run — only re-search on user-driven changes. */
+      if (kind === "symbol" && !this.searched()) return;
+      this.executeSearch();
+    });
+  }
+
   asValue(e: Event): string {
     return (e.target as HTMLInputElement).value;
   }
 
   find(event: Event) {
     event.preventDefault();
+    this.executeSearch();
+  }
+
+  private executeSearch() {
     const p = this.pattern();
-    if (!p) return;
+    if (!p) {
+      this.findResults.set([]);
+      this.searched.set(false);
+      this.symbolDetail.set(null);
+      this.error.set("");
+      return;
+    }
 
     this.loading.set(true);
     this.error.set("");

@@ -92,6 +92,22 @@ test.describe("Symbol explorer page", () => {
     await expect(page).toHaveScreenshot("symbol-explorer-file-mode.png");
   });
 
+  test("switching kind re-searches with the new kind", async ({ page }) => {
+    await page.goto("/acme-api/main/symbols");
+
+    await page.getByPlaceholder("Search symbols or files").fill("hello");
+    await page.getByRole("button", { name: "Find" }).click();
+
+    for (const sym of FIND_SYMBOLS) {
+      await expect(page.locator("button.action-list-item", { hasText: sym.name })).toBeVisible();
+    }
+
+    await page.locator("select.select").selectOption("file");
+
+    await expect(page.getByText("src/index.ts")).toBeVisible();
+    await expect(page.getByText("src/routes.ts")).toBeVisible();
+  });
+
   test("shows error on search failure", async ({ page }) => {
     await page.goto("/acme-api/main/symbols");
     await page.getByPlaceholder("Search symbols or files").fill("test");

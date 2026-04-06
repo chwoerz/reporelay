@@ -202,7 +202,12 @@ export async function getFileContent(
   let content: string | null = null;
   if (opts.mirrorsDir) {
     const mirrorPath = join(opts.mirrorsDir, `${resolved.repo.name}.git`);
-    content = await readFileFromMirror(mirrorPath, resolved.ref.commitSha, filePath);
+    content = await readFileFromMirror(
+      mirrorPath,
+      resolved.ref.commitSha,
+      filePath,
+      resolved.repo.remoteUrl ?? undefined,
+    );
   }
 
   // Fall back to indexed chunks

@@ -151,16 +151,32 @@ async function checkoutAndListFiles(opts: {
   globPatterns: string[];
   mirrorPath: string;
   commitSha: string;
+  remoteUrl: string | null;
   config: Config;
   logger: Logger;
 }): Promise<{ worktreePath: string; files: string[] }> {
-  const { refRepo, repoRefId, job, globPatterns, mirrorPath, commitSha, config, logger } = opts;
+  const {
+    refRepo,
+    repoRefId,
+    job,
+    globPatterns,
+    mirrorPath,
+    commitSha,
+    remoteUrl,
+    config,
+    logger,
+  } = opts;
   logger.info({ repo: job.repo, ref: job.ref, commitSha }, "Checking out worktree");
   await refRepo.updateProgress(repoRefId, {
     stage: "checking-out",
     stageMessage: "Checking out worktree…",
   });
-  const worktreePath = await checkoutWorktree(mirrorPath, config.GIT_WORKTREES_DIR, commitSha);
+  const worktreePath = await checkoutWorktree(
+    mirrorPath,
+    config.GIT_WORKTREES_DIR,
+    commitSha,
+    remoteUrl ?? undefined,
+  );
 
   await refRepo.updateProgress(repoRefId, {
     stage: "diffing",
@@ -291,6 +307,7 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
       globPatterns: repo.globPatterns,
       mirrorPath: sync.mirrorPath,
       commitSha: sync.commitSha,
+      remoteUrl: repo.remoteUrl,
       config,
       logger,
     });
