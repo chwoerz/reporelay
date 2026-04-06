@@ -4,7 +4,7 @@ layout: home
 hero:
   name: RepoRelay
   text: Code context for LLMs
-  tagline: Self-hosted, MCP-native code context engine. Index any number of Git repos — from any host — and make them queryable by your LLM.
+  tagline: Self-hosted, MCP-native code context engine. <br>Index any number of Git repos — from any host — and make them queryable by your LLM.
   actions:
     - theme: brand
       text: Get Started

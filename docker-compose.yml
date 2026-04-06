@@ -1,3 +1,11 @@
+# ── Shared environment variables (used by worker, web, and mcp) ──
+x-shared-env: &shared-env
+  DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+  EMBEDDING_URL: http://host.docker.internal:11434
+  EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+  GIT_MIRRORS_DIR: /data/mirrors
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
 services:
   # ── ParadeDB (Postgres + pgvector + pg_trgm + pg_search) ──
   postgres:
@@ -24,13 +32,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-      EMBEDDING_URL: http://host.docker.internal:11434
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      <<: *shared-env
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
-      GIT_MIRRORS_DIR: /data/mirrors
       GIT_WORKTREES_DIR: /data/worktrees
-      LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - gitdata:/data
 
@@ -46,12 +50,10 @@ services:
       worker:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-      EMBEDDING_URL: http://host.docker.internal:11434
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      <<: *shared-env
       WEB_PORT: 3001
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - gitdata:/data:ro
 
   # ── MCP Server (Model Context Protocol over HTTP) ──
   mcp:
@@ -65,12 +67,10 @@ services:
       worker:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-      EMBEDDING_URL: http://host.docker.internal:11434
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      <<: *shared-env
       MCP_SERVER_PORT: 3000
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - gitdata:/data:ro
 
   # ── UI (Angular admin dashboard served by nginx) ──
   ui:
