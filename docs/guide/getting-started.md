@@ -30,13 +30,14 @@ docker compose up -d
 
 This builds and starts all 5 services:
 
-| Service    | Port   | Description                                |
-| ---------- | ------ | ------------------------------------------ |
-| `postgres` | `5432` | ParadeDB (Postgres + pgvector + pg_search) |
-| `worker`   | —      | Background indexing worker (pg-boss)       |
-| `web`      | `3001` | REST API + Swagger UI (`/docs`)            |
-| `mcp`      | `3000` | MCP server (HTTP transport)                |
-| `ui`       | `80`   | Angular admin dashboard                    |
+| Service    | Port    | Description                                |
+| ---------- | ------- | ------------------------------------------ |
+| `postgres` | `5432`  | ParadeDB (Postgres + pgvector + pg_search) |
+| `worker`   | —       | Background indexing worker (pg-boss)       |
+| `web`      | `3001`  | REST API + Swagger UI (`/docs`)            |
+| `mcp`      | `3000`  | MCP server (HTTP transport)                |
+| `ui`       | `80`    | Angular admin dashboard (nginx)            |
+| Ollama     | `11434` | Embedding model (external)                 |
 
 The worker runs database migrations automatically on first startup.
 
@@ -108,8 +109,19 @@ pnpm dev
 pnpm dev:worker   # Background indexing worker
 pnpm dev:mcp      # MCP server (HTTP on :3000)
 pnpm dev:web      # REST API on :3001
+pnpm dev:proxy    # MCP proxy (connects to MCP server)
 pnpm dev:ui       # Angular dashboard on :4200
 ```
+
+| Service    | Port    | Description                                |
+| ---------- | ------- | ------------------------------------------ |
+| `postgres` | `5432`  | ParadeDB (Postgres + pgvector + pg_search) |
+| `worker`   | —       | Background indexing worker (pg-boss)       |
+| `web`      | `3001`  | REST API + Swagger UI (`/docs`)            |
+| `mcp`      | `3000`  | MCP server (HTTP transport)                |
+| `proxy`    | — stdio | MCP proxy (connects to MCP server)         |
+| `ui`       | `4200`  | Angular dev server                         |
+| Ollama     | `11434` | Embedding model (external)                 |
 
 The worker automatically bootstraps the database on first startup (extensions, migrations, BM25 index).
 

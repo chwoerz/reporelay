@@ -2,7 +2,8 @@
 
 The Angular 21 admin dashboard provides a full UI for managing repositories and exploring indexed code.
 
-Default: `http://localhost:4200` (proxies `/api` to the Fastify server)
+- **Docker:** `http://localhost` (port 80, nginx serves static files and proxies `/api`)
+- **Local dev:** `http://localhost:4200` (Angular dev server, proxies `/api` to Fastify)
 
 ## Views
 
@@ -16,6 +17,10 @@ Default: `http://localhost:4200` (proxies `/api` to the Fastify server)
 | **Symbol Explorer** | Find files/symbols by pattern, lookup symbol source + imports                                                     |
 
 ## Running the Dashboard
+
+**Docker** — the `ui` service starts automatically with `docker compose up -d` on port `80`.
+
+**Local dev:**
 
 ```bash
 pnpm dev:ui   # Angular dev server on :4200
