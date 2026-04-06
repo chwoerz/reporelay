@@ -4,34 +4,23 @@ Every indexing run follows the same full-index path — no special cases for fir
 
 ```mermaid
 flowchart TD
-    trigger([Web API / Admin Dashboard])
-    trigger --> enqueue[Enqueue pg-boss job]
-    enqueue --> worker[Worker picks up job]
+    A([Trigger: API or Dashboard]) --> B[Git fetch & checkout worktree]
+    B --> C[List files via git ls-tree]
+    C --> D{SHA-256 changed?}
+    D -->|No| E[Reuse existing data]
+    D -->|Yes| F[Parse & chunk with tree-sitter]
+    E --> G[Embed via Ollama & store]
+    F --> G
+    G --> H([Done — status: ready])
 
-    worker --> sync[Git sync · fetch or clone mirror]
-    sync --> upsertRef[Upsert repo_ref · status = indexing<br/><i>store semver if tag-like ref</i>]
-    upsertRef --> checkout[Checkout worktree at commitSha]
-    checkout --> listFiles[git ls-tree · list all files<br/>filter by glob patterns]
-    listFiles --> process
-
-    subgraph loop [For each file]
-        process[Read content · SHA-256 hash<br/>Upsert file record + ref_files link] --> dedup{SHA-256<br/>match?}
-        dedup -->|Yes · unchanged| skip[Skip parse/chunk/embed<br/>Reuse existing file_contents]
-        dedup -->|No · new content| parse[Parse · extract symbols<br/><i>tree-sitter / markdown</i>]
-        parse --> chunk[Create chunks<br/><i>symbol-aware + overlap</i>]
-    end
-
-    skip --> collect
-    chunk --> collect
-    collect[Collect new chunks] --> embed[Batch embed<br/><i>Ollama</i>]
-    embed --> storePG[Persist embedding vectors<br/><i>pgvector + ParadeDB BM25</i>]
-    storePG --> done[Status = ready · cleanup worktree]
-
-    style trigger fill:#3b82f6,color:#fff,stroke:none
-    style done fill:#22c55e,color:#fff,stroke:none
-    style dedup fill:#f59e0b,color:#fff,stroke:none
-    style skip fill:#22c55e,color:#fff,stroke:none
-    style loop fill:none,stroke:#6b7280,stroke-dasharray:5 5
+    style A fill:#6366f1,color:#fff,stroke:#4f46e5,stroke-width:2px
+    style B fill:#3b82f6,color:#fff,stroke:#2563eb
+    style C fill:#06b6d4,color:#fff,stroke:#0891b2
+    style D fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
+    style E fill:#22c55e,color:#fff,stroke:#16a34a
+    style F fill:#8b5cf6,color:#fff,stroke:#7c3aed
+    style G fill:#ec4899,color:#fff,stroke:#db2777
+    style H fill:#22c55e,color:#fff,stroke:#16a34a,stroke-width:2px
 ```
 
 ## How SHA-256 Dedup Works

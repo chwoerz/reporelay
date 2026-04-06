@@ -16,7 +16,7 @@ export default withMermaid(
     },
 
     themeConfig: {
-      logo: "/logo.svg",
+      logo: "/logo-only.svg",
 
       nav: [
         { text: "Guide", link: "/guide/why-reporelay" },
