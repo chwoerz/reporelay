@@ -6,7 +6,8 @@ dist
 .DS_Store
 .idea/
 
-docs/.vitepress
+docs/.vitepress/dist
+docs/.vitepress/cache
 
 .playwright-mcp
 *.tgz
