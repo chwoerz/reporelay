@@ -101,7 +101,13 @@ function searchResultsToChunks(results: SearchResult[]): ContextChunk[] {
   }));
 }
 
-/** Generic search-based gatherer — differs only by default query. */
+/**
+ * Generic search-based gatherer — differs only by default query.
+ *
+ * Resolves `input.ref` through semver before searching so that
+ * constraints like `"^1.0.0"` or bare `"1.0.0"` match stored tags
+ * like `"v1.0.0"`.
+ */
 async function gatherBySearch(
   db: Db,
   embedder: Embedder,
@@ -109,10 +115,18 @@ async function gatherBySearch(
   defaultQuery: string,
 ): Promise<ContextChunk[]> {
   const query = input.query ?? defaultQuery;
+
+  // Resolve ref through semver when we have a repo context.
+  let ref = input.ref;
+  if (ref) {
+    const resolved = await resolveRef(db, input.repoId, ref);
+    if (resolved) ref = resolved.ref;
+  }
+
   const results = await searchHybrid(db, embedder, {
     query,
     repo: input.repo,
-    ref: input.ref,
+    ref,
     limit: 30,
   });
   return searchResultsToChunks(results);

@@ -345,9 +345,35 @@ export async function buildContext(db: Db, embedder: Embedder, input: ContextPac
 
 /**
  * Search code (hybrid lexical + vector).
+ *
+ * When both `repo` and `ref` are provided, resolves the ref through
+ * semver resolution before searching.  This means callers can pass
+ * constraints like `"^1.0.0"` or bare versions like `"1.0.0"` (which
+ * correctly match a stored `"v1.0.0"` tag).
+ *
+ * When only `ref` is given without `repo`, resolution is not possible
+ * and the value is passed through as-is (exact string match).
  */
 export async function searchCode(db: Db, embedder: Embedder, opts: HybridSearchOptions) {
-  return searchHybrid(db, embedder, opts);
+  const resolvedOpts = await resolveSearchRef(db, opts);
+  return searchHybrid(db, embedder, resolvedOpts);
+}
+
+/**
+ * Resolve the `ref` field in search options through semver when a
+ * `repo` context is available.  Returns a copy with the resolved ref
+ * name substituted in, or the original options unchanged.
+ */
+async function resolveSearchRef(db: Db, opts: HybridSearchOptions): Promise<HybridSearchOptions> {
+  if (!opts.ref || !opts.repo) return opts;
+
+  const repo = await findRepo(db, opts.repo);
+  if (!repo) return opts;
+
+  const resolved = await resolveRef(db, repo.id, opts.ref);
+  if (!resolved) return opts;
+
+  return { ...opts, ref: resolved.ref };
 }
 
 /**
