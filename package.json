@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:proxy": "tsc -p src/mcp-proxy/tsconfig.build.json",
+    "build:proxy": "cd src/mcp-proxy && npx tsup --tsconfig tsconfig.build.json",
     "dev": "./scripts/dev.sh",
     "dev:worker": "tsx watch --env-file=.env src/worker/index.ts",
     "dev:mcp": "tsx --env-file=.env src/mcp/main.ts",
@@ -75,6 +75,7 @@
     "mermaid": "^11.14.0",
     "prettier": "^3.8.1",
     "testcontainers": "^11.13.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitepress": "^1.6.4",
