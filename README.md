@@ -98,8 +98,9 @@ pnpm dev
 
 # Or individual services
 pnpm dev:worker   # Background indexing worker
-pnpm dev:mcp      # MCP server (stdio)
+pnpm dev:mcp      # MCP server (HTTP on :3000)
 pnpm dev:web      # REST API on :3001
+pnpm dev:proxy    # MCP proxy (connects to MCP server)
 pnpm dev:ui       # Angular dashboard on :4200
 ```
 
@@ -130,22 +131,51 @@ Or use the admin dashboard at `http://localhost:4200`.
 
 ### Claude Desktop / Cursor
 
+Clients connect via the MCP proxy, which auto-detects your project's languages and forwards requests to the RepoRelay HTTP server:
+
 ```json
 {
   "mcpServers": {
     "reporelay": {
       "command": "npx",
-      "args": ["tsx", "src/mcp/main.ts"],
-      "env": {
-        "DATABASE_URL": "postgresql://reporelay:reporelay@localhost:5432/reporelay",
-        "EMBEDDING_PROVIDER": "ollama"
-      }
+      "args": ["reporelay", "--server", "http://localhost:3000/mcp"]
     }
   }
 }
 ```
 
-See the [full documentation](https://chwoerz.github.io/reporelay/guide/mcp-integration) for OpenCode, HTTP transport, and other client configurations.
+See the [full documentation](https://chwoerz.github.io/reporelay/guide/mcp-integration) for OpenCode, remote server, and other client configurations.
+
+### MCP Proxy
+
+The MCP proxy is a lightweight local binary that sits between your IDE and the RepoRelay HTTP server. It:
+
+1. Detects languages from the developer's working directory
+2. Connects to the RepoRelay MCP server over HTTP
+3. Forwards all MCP requests, injecting detected languages into tool calls
+
+```bash
+# Via CLI argument
+npx reporelay --server http://localhost:3000/mcp
+
+# Or via environment variable
+REPORELAY_URL=http://localhost:3000/mcp npx reporelay
+```
+
+For a remote server, just change the URL:
+
+```json
+{
+  "mcpServers": {
+    "reporelay": {
+      "command": "npx",
+      "args": ["reporelay", "--server", "https://reporelay.example.com/mcp"]
+    }
+  }
+}
+```
+
+The proxy injects languages into 4 tools that support language filtering: `search_code`, `get_symbol`, `find`, and `list_repos`. Per-request `languages` values provided by the caller take priority over auto-detected ones.
 
 ### Language Auto-Detection
 

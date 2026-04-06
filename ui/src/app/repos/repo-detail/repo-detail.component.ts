@@ -29,6 +29,7 @@ export class RepoDetailComponent {
   syncRef = signal("");
   message = signal("");
   messageIsError = signal(false);
+  refreshing = signal(false);
 
   /** Force polling right after sync, before the repo data reflects the indexing status. */
   private forcePolling = signal(false);
@@ -198,6 +199,24 @@ export class RepoDetailComponent {
       next: () => this.repo.reload(),
       error: (err) => {
         this.message.set(err.error?.error ?? "Delete failed.");
+        this.messageIsError.set(true);
+      },
+    });
+  }
+
+  refreshRefs() {
+    const name = this.routeName();
+    this.refreshing.set(true);
+    this.message.set("");
+
+    this.http.post(`/api/repos/${name}/refresh-refs`, {}).subscribe({
+      next: () => {
+        this.refreshing.set(false);
+        this.gitRefs.reload();
+      },
+      error: (err) => {
+        this.refreshing.set(false);
+        this.message.set(err.error?.error ?? "Refresh failed.");
         this.messageIsError.set(true);
       },
     });

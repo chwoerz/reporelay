@@ -18,6 +18,7 @@ export const apiPaths = {
   getRepo: "/api/repos/:name",
   getSymbol: "/api/repos/:name/refs/:ref/symbols/:symbolName",
   listRepos: "/api/repos",
+  refreshGitRefs: "/api/repos/:name/refresh-refs",
   searchCode: "/api/search",
   syncRepo: "/api/repos/:name/sync",
   updateRepo: "/api/repos/:name",

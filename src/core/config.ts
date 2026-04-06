@@ -3,7 +3,7 @@
  * Validated via Zod schema on startup.
  */
 import { z } from "zod/v4";
-import { EmbeddingProviders, Languages, McpTransports } from "./types.js";
+import { EmbeddingProviders, Languages } from "./types.js";
 
 // ── Schema ──
 
@@ -18,7 +18,6 @@ export const configSchema = z.object({
   EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
 
   // MCP
-  MCP_TRANSPORT: z.enum(McpTransports).default("stdio"),
   MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
   /**
    * Comma-separated list of languages to include in MCP search results.

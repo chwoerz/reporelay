@@ -220,6 +220,11 @@ export async function mockApi(page: Page) {
     await route.fulfill({ json: { message: "Sync enqueued" } });
   });
 
+  // POST /api/repos/:name/refresh-refs
+  await page.route("**/api/repos/*/refresh-refs", async (route) => {
+    await route.fulfill({ json: GIT_REFS });
+  });
+
   // POST /api/repos/:name/context
   await page.route("**/api/repos/*/context", async (route) => {
     await route.fulfill({ json: CONTEXT_PACK_RESULT });

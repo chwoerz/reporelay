@@ -4,7 +4,7 @@ Every indexing run follows the same full-index path — no special cases for fir
 
 ```mermaid
 flowchart TD
-    trigger([sync_repo / Web API / MCP tool])
+    trigger([Web API / Admin Dashboard])
     trigger --> enqueue[Enqueue pg-boss job]
     enqueue --> worker[Worker picks up job]
 

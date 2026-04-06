@@ -111,6 +111,40 @@ test.describe("Repo detail page", () => {
     await expect(page).toHaveScreenshot("repo-detail-sync-error.png");
   });
 
+  // ── Refresh tags ──
+
+  test("has a refresh tags button", async ({ page }) => {
+    await page.goto("/acme-api");
+
+    const refreshBtn = page.getByRole("button", { name: "Refresh tags" });
+    await expect(refreshBtn).toBeVisible();
+    await expect(refreshBtn).toBeEnabled();
+  });
+
+  test("calls refresh-refs endpoint when clicking Refresh tags", async ({ page }) => {
+    let refreshCalled = false;
+    await page.route("**/api/repos/acme-api/refresh-refs", async (route) => {
+      refreshCalled = true;
+      await route.fulfill({ json: { branches: ["main"], tags: ["v1.0.0", "v1.1.0", "v2.0.0", "v3.0.0"] } });
+    });
+
+    await page.goto("/acme-api");
+    await page.getByRole("button", { name: "Refresh tags" }).click();
+    expect(refreshCalled).toBe(true);
+  });
+
+  test("shows error when refresh-refs fails", async ({ page }) => {
+    await page.goto("/acme-api");
+
+    await expectApiError({
+      page,
+      routePattern: "**/api/repos/acme-api/refresh-refs",
+      status: 500,
+      errorJson: { error: "Mirror sync failed." },
+      action: () => page.getByRole("button", { name: "Refresh tags" }).click(),
+    });
+  });
+
   // ── Indexed refs table ──
 
   test("displays indexed refs in a table", async ({ page }) => {

@@ -89,6 +89,14 @@
       <button class="btn btn-primary" type="submit" [disabled]="!syncRef()">
         <span class="mi">sync</span> Sync
       </button>
+      <button class="btn btn-outline" type="button" (click)="refreshRefs()" [disabled]="refreshing()">
+        @if (refreshing()) {
+          <span class="spinner spinner-sm"></span>
+        } @else {
+          <span class="mi">refresh</span>
+        }
+        Refresh tags
+      </button>
     </form>
   }
 

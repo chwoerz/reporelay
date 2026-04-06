@@ -3,36 +3,33 @@
 ```
 reporelay/
 ├── src/
-│   ├── core/               Shared types, config (Zod), logging (Pino), progress tracker
+│   ├── core/               Shared types, config (Zod), logging (Pino), bootstrap
 │   ├── generated/          OpenAPI-generated types + Zod schemas — do not edit manually
-│   │   ├── types/          TypeScript interfaces for all API schemas and operations
-│   │   ├── zod/            Zod validation schemas for request/response bodies
-│   │   ├── schemas/        JSON Schema files
-│   │   └── api.d.ts        openapi-typescript generated types
 │   ├── git/                Git mirror clone/fetch, worktree, file listing, credentials
 │   ├── parser/             Unified tree-sitter pipeline + custom markdown parser
 │   │   └── languages/      Per-language extractors (TS/JS, Python, Go, Java, Kotlin, Rust, C, C++)
 │   ├── indexer/            Symbol-aware chunker, embedding client, orchestration pipeline
 │   ├── storage/
-│   │   ├── schema/         Drizzle ORM schema (7 tables), DB connection, migrations
-│   │   ├── repositories/   Type-safe CRUD repositories (7 entity repos + base class)
+│   │   ├── schema/         Drizzle ORM schema, DB connection, migrations
+│   │   ├── repositories/   Type-safe CRUD repositories extending a generic base class
 │   │   └── queue/          pg-boss job queue wrapper
 │   ├── retrieval/          Hybrid search (BM25+vector), semver resolver, context builder
 │   ├── services/           Shared business logic (used by both MCP tools and web API)
-│   ├── mcp/                MCP server, 7 tools, 2 resources, 3 prompts (stdio + HTTP)
-│   ├── web/                Fastify REST API (18 routes) + Swagger UI at /docs
+│   ├── mcp/                MCP server (HTTP), tools, resources, prompts
+│   ├── mcp-proxy/          Local MCP proxy for remote servers (language injection)
+│   ├── web/                Fastify REST API + Swagger UI at /docs
 │   ├── worker/             Background indexing worker (pg-boss handler)
 │   └── e2e/                End-to-end integration tests
 ├── test/
 │   ├── fixtures/           Multi-language sample source code
 │   └── setup/              Testcontainers (ParadeDB) + temp Git repo helpers
-├── ui/                     Angular 21 admin dashboard (Material, highlight.js, 6 views)
+├── ui/                     Angular admin dashboard (Material, highlight.js)
 ├── docs/                   VitePress documentation site
 ├── openapi.yaml            OpenAPI 3.1 spec — single source of truth for API contracts
 ├── kubb.config.ts          Kubb codegen config (types + Zod from OpenAPI)
 ├── drizzle/                Generated SQL migrations
 ├── docker-compose.yml      Postgres (ParadeDB), worker, web services
-├── Dockerfile              Multi-stage Node 22 build
+├── Dockerfile              Multi-stage Node build
 └── scripts/dev.sh          Dev convenience script (Postgres + worker + web)
 ```
 
@@ -40,13 +37,7 @@ reporelay/
 
 ### `src/core/`
 
-Shared configuration, types, and utilities used across all modules.
-
-- **`config.ts`** — Zod-validated environment configuration (`DATABASE_URL`, `EMBEDDING_PROVIDER`, etc.)
-- **`types.ts`** — Shared type definitions, `as const` arrays (`Languages`, `SymbolKinds`, `ContextStrategies`, `EmbeddingProviders`, `McpTransports`)
-- **`logger.ts`** — Pino logger factory
-- **`progress.ts`** — Indexing progress tracker using PostgreSQL `LISTEN`/`NOTIFY`
-- **`bootstrap.ts`** — Shared application bootstrap (DB connection, migrations, embedder)
+Shared configuration, types, and utilities used across all modules. Includes Zod-validated environment config, shared type definitions (`Languages`, `SymbolKinds`, `ContextStrategies`, etc.), Pino logger factory, and application bootstrap logic.
 
 ### `src/generated/`
 
@@ -54,42 +45,23 @@ Auto-generated from `openapi.yaml` by [Kubb](https://kubb.dev/) and [openapi-typ
 
 ### `src/git/`
 
-Git operations via `simple-git`.
-
-- **`git-sync.ts`** — Mirror clone/fetch, worktree checkout, `listFiles` (via `git ls-tree`), file classification, ref listing, HTTPS credential helpers
-- **`index.ts`** — Barrel exports
+Git operations via `simple-git`. Handles mirror clone/fetch, worktree checkout, file listing (via `git ls-tree`), ref listing, token-based HTTPS credentials, file-to-language classification, and project language detection.
 
 ### `src/parser/`
 
-Code parsing via tree-sitter with per-language extractors.
-
-- **`tree-sitter-parser.ts`** — Unified parsing pipeline: takes source code, returns symbols (functions, classes, interfaces, imports, exports)
-- **`markdown-parser.ts`** — Custom markdown parser using `mdast`
-- **`languages/`** — Per-language extractors for TypeScript/JavaScript, Python, Go, Java, Kotlin, Rust, C, and C++
+Code parsing via tree-sitter with per-language extractors. A unified parsing pipeline takes source code and returns symbols (functions, classes, interfaces, imports, exports). Includes a custom markdown parser using `mdast` and per-language extractors for all supported languages.
 
 ### `src/indexer/`
 
-The indexing pipeline that processes files into searchable chunks.
-
-- **`pipeline.ts`** — Orchestration: file processing, SHA-256 dedup, parsing, chunking, embedding coordination
-- **`chunker.ts`** — Symbol-aware code chunker that respects function/class boundaries
-- **`embedder.ts`** — Embedding client abstraction (Ollama provider)
+The indexing pipeline that processes files into searchable chunks. Orchestrates file processing with SHA-256 dedup, symbol-aware chunking that respects function/class boundaries, and embedding generation (Ollama).
 
 ### `src/storage/`
 
-Database layer using Drizzle ORM with PostgreSQL.
-
-- **`schema/schema.ts`** — 7 tables: `repos`, `refs`, `file_contents`, `ref_files`, `symbols`, `chunks`, `imports`
-- **`repositories/`** — Class-based repositories extending `BaseRepository<T>` for type-safe CRUD
-- **`queue/`** — pg-boss job queue wrapper for background indexing jobs
+Database layer using Drizzle ORM with PostgreSQL. Contains the schema definition, class-based repositories extending a generic `BaseRepository<T>` for type-safe CRUD, and a pg-boss job queue wrapper for background indexing jobs.
 
 ### `src/retrieval/`
 
-Search and context building.
-
-- **`hybrid-search.ts`** — BM25 (ParadeDB `pg_search`) + vector (pgvector cosine) combined via RRF
-- **`semver-resolver.ts`** — Resolves semver range constraints (e.g. `^1.0.0`) to indexed tags
-- **`context-builder.ts`** — Four strategies: `explain`, `implement`, `debug`, `recent-changes`
+Search and context building. Combines BM25 full-text search (ParadeDB `pg_search`) with vector similarity (pgvector cosine) via Reciprocal Rank Fusion. Includes semver range resolution for tags and four context-building strategies: `explain`, `implement`, `debug`, `recent-changes`.
 
 ### `src/services/`
 
@@ -97,39 +69,27 @@ Shared business logic consumed by both the MCP server and the REST API.
 
 ### `src/mcp/`
 
-Model Context Protocol server.
+Model Context Protocol server. Registers tools, resource templates, and prompt templates. Bootstraps DB + embedder on startup.
 
-- **`main.ts`** — Entry point (bootstraps DB + embedder, starts server)
-- **`server.ts`** — MCP server factory (registers tools, resources, prompts)
-- **`tools.ts`** — 7 tool definitions
-- **`resources.ts`** — 2 resource templates (file content, directory tree)
-- **`prompts.ts`** — 3 prompt templates (explain, implement, debug)
+### `src/mcp-proxy/`
+
+Local MCP proxy for remote RepoRelay servers. Runs as a stdio server on the developer's machine, detects languages from the working directory, and forwards requests to a remote RepoRelay MCP server over HTTP — injecting detected languages into tool calls.
 
 ### `src/web/`
 
-Fastify REST API with 18 routes.
-
-- **`main.ts`** — Entry point (bootstraps DB + embedder, starts Fastify)
-- **`app.ts`** — Route registration (system, repo management, feature routes) + Swagger UI
+Fastify REST API with Swagger UI. Handles system routes, repository management, and feature routes (search, file browsing, symbols, context building).
 
 ### `src/worker/`
 
-Background indexing worker.
-
-- **`index.ts`** — Entry point (bootstraps DB + embedder + pg-boss, starts worker)
-- **`handler.ts`** — Job handler: checkout, list files, run pipeline, update ref status
+Background indexing worker. Picks up pg-boss jobs, checks out code, runs the indexing pipeline, and updates ref status.
 
 ### `test/`
 
-Test infrastructure.
-
-- **`fixtures/samples.ts`** — Multi-language sample source code for parser tests
-- **`setup/postgres.ts`** — Testcontainers setup for ParadeDB
-- **`setup/test-repo.ts`** — Temporary Git repository helpers for integration tests
+Test infrastructure. Includes multi-language sample source code for parser tests, Testcontainers setup for ParadeDB, and temporary Git repository helpers for integration tests.
 
 ### `ui/`
 
-Angular 21 admin dashboard with 6 views. See `ui/DESIGN.md` for the full UI design spec.
+Angular admin dashboard. See `ui/DESIGN.md` for the full UI design spec.
 
 ## Import Conventions
 

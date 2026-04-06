@@ -178,6 +178,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/repos/{name}/refresh-refs:
+    post:
+      operationId: refreshGitRefs
+      summary: Fetch latest branches and tags from the remote
+      description: >
+        Performs a `git fetch --prune` on the bare mirror to pick up new
+        branches/tags (or remove deleted ones) without triggering indexing.
+        Returns the updated list of branches and tags.
+      tags: [repos]
+      parameters:
+        - $ref: "#/components/parameters/repoName"
+      responses:
+        "200":
+          description: Updated branches and tags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GitRefs"
+        "404":
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Mirror sync failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/repos/{name}/sync:
     post:
       operationId: syncRepo

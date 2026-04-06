@@ -39,7 +39,7 @@ pnpm dev
 
 # Option B: Individual services
 pnpm dev:worker   # Background indexing worker
-pnpm dev:mcp      # MCP server (stdio)
+pnpm dev:mcp      # MCP server (HTTP on :3000)
 pnpm dev:web      # REST API on :3001
 pnpm dev:ui       # Angular dashboard on :4200
 ```

@@ -1,16 +1,14 @@
 /**
  * MCP server factory.
  *
- * Creates an McpServer, registers tools/resources/prompts, and connects
- * the appropriate transport (stdio or streamable HTTP).
+ * Creates an McpServer, registers tools/resources/prompts, and starts
+ * a stateless HTTP transport.  Each incoming request gets a fresh
+ * McpServer + StreamableHTTPServerTransport pair (no sessions).
  *
- * HTTP mode is **stateless**: each incoming request gets a fresh McpServer
- * and StreamableHTTPServerTransport (`sessionIdGenerator: undefined`).
- * This avoids session tracking, works with any MCP client (OpenCode,
- * Claude Desktop, etc.), and allows horizontal scaling without sticky sessions.
+ * Clients never connect to this server directly — the local MCP proxy
+ * (`src/mcp-proxy/`) bridges between the IDE (stdio) and this HTTP server.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { Db } from "../storage/index.js";
@@ -54,22 +52,18 @@ export function createMcpServer(deps: McpDeps): McpServer {
   return server;
 }
 
-/**
- * Start the MCP server with the configured transport.
- *
- * - `stdio`:  connects via stdin/stdout (for local MCP clients)
- * - `http`:   starts a stateless HTTP server — each request creates a fresh
- *             McpServer + StreamableHTTPServerTransport pair (no sessions)
- */
-export async function startMcpServer(deps: McpDeps): Promise<void> {
-  if (deps.config.MCP_TRANSPORT === "stdio") {
-    const server = createMcpServer(deps);
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    return;
-  }
+// ── HTTP Server ──
 
-  // Stateless Streamable HTTP mode
+/**
+ * Start the MCP server as a stateless HTTP service.
+ *
+ * Each request to `/mcp` creates a fresh McpServer +
+ * StreamableHTTPServerTransport pair (no session tracking).
+ * `/health` returns a simple status check.
+ *
+ * Returns the underlying `http.Server` so callers can shut it down.
+ */
+export async function startMcpServer(deps: McpDeps): Promise<import("node:http").Server> {
   const port = deps.config.MCP_SERVER_PORT;
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -97,4 +91,5 @@ export async function startMcpServer(deps: McpDeps): Promise<void> {
   });
 
   httpServer.listen(port);
+  return httpServer;
 }

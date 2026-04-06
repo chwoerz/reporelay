@@ -6,7 +6,6 @@ describe("Config", () => {
     const config = loadConfig({});
     expect(config.DATABASE_URL).toBe("postgresql://reporelay:reporelay@localhost:5432/reporelay");
     expect(config.EMBEDDING_PROVIDER).toBe("ollama");
-    expect(config.MCP_TRANSPORT).toBe("stdio");
     expect(config.MCP_SERVER_PORT).toBe(3000);
     expect(config.WEB_PORT).toBe(3001);
     expect(config.LOG_LEVEL).toBe("info");
@@ -42,10 +41,9 @@ describe("Config", () => {
     expect(() => loadConfig({ EMBEDDING_PROVIDER: "mock" })).toThrow();
   });
 
-  it("defaults MCP_TRANSPORT to stdio", () => {
-    expect(loadConfig({}).MCP_TRANSPORT).toBe("stdio");
-    expect(loadConfig({ MCP_TRANSPORT: "http" }).MCP_TRANSPORT).toBe("http");
-    expect(() => loadConfig({ MCP_TRANSPORT: "websocket" })).toThrow();
+  it("defaults MCP_SERVER_PORT to 3000", () => {
+    expect(loadConfig({}).MCP_SERVER_PORT).toBe(3000);
+    expect(loadConfig({ MCP_SERVER_PORT: "4000" }).MCP_SERVER_PORT).toBe(4000);
   });
 
   it("MCP_LANGUAGES defaults to undefined", () => {

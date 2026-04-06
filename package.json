@@ -4,12 +4,16 @@
   "description": "A self-hosted, MCP-native code context engine for private repositories.",
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "reporelay": "./dist/src/mcp-proxy/main.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "./scripts/dev.sh",
     "dev:worker": "tsx watch --env-file=.env src/worker/index.ts",
     "dev:mcp": "tsx --env-file=.env src/mcp/main.ts",
     "dev:web": "tsx watch --env-file=.env src/web/main.ts",
+    "dev:proxy": "tsx --env-file=.env src/mcp-proxy/main.ts",
     "dev:ui": "cd ui && npx ng serve",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",

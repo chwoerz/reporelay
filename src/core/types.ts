@@ -107,11 +107,6 @@ export interface SearchResult {
 export const EmbeddingProviders = ["ollama"] as const;
 export type EmbeddingProvider = (typeof EmbeddingProviders)[number];
 
-// ── MCP transport ──
-
-export const McpTransports = ["stdio", "http"] as const;
-export type McpTransport = (typeof McpTransports)[number];
-
 // ── Context pack strategy ──
 
 export const ContextStrategies = ["explain", "implement", "debug", "recent-changes"] as const;

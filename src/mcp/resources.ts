@@ -28,7 +28,6 @@ async function listReadyRepoRefs(
   uriBuilder: (repoName: string, ref: string) => string,
   nameBuilder: (repoName: string, ref: string) => string,
 ) {
-  console.log("deps", deps.languageThreshold);
   const entries = await listReposWithRefs(deps.db, deps.languages, deps.languageThreshold);
   const resources = entries.flatMap(({ repo, refs }) =>
     refs

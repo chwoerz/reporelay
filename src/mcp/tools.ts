@@ -3,11 +3,17 @@
  *
  * Each tool: Zod input schema → handler that delegates to the shared
  * service layer in src/services/.
+ *
+ * Tools that filter by language accept an optional `languages` parameter.
+ * When provided by the client it overrides the server-wide default
+ * (`deps.languages`, derived from `MCP_LANGUAGES` or auto-detected from
+ * the working directory at startup).  This makes language filtering work
+ * for remote HTTP clients that cannot rely on local auto-detection.
  */
 import { z } from "zod/v4";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { McpDeps } from "./server.js";
-import { ContextStrategies } from "../core/types.js";
+import { ContextStrategies, Languages } from "../core/types.js";
 import {
   resolveRepoAndRef,
   findRepo,
@@ -59,6 +65,28 @@ function isToolResult(value: unknown): value is ToolResult {
   return typeof value === "object" && value !== null && "content" in value;
 }
 
+/**
+ * Optional Zod schema for the `languages` parameter accepted by filtering tools.
+ * Validates each entry against the known `Languages` enum.
+ */
+const languagesParam = z
+  .array(z.enum(Languages))
+  .optional()
+  .describe(
+    'Filter results to these languages (e.g. ["typescript","python"]). ' +
+      "Overrides the server-wide default when provided.",
+  );
+
+/**
+ * Pick the effective language list: per-request `override` wins over the
+ * server-wide `deps.languages` default.  An empty array is treated as
+ * "no filter" (same as `undefined`).
+ */
+function resolveLanguages(override: string[] | undefined, deps: McpDeps): string[] | undefined {
+  if (override && override.length > 0) return override;
+  return deps.languages;
+}
+
 // ── Registration ──
 
 export function registerTools(server: McpServer, deps: McpDeps): void {
@@ -73,15 +101,16 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
         repo: z.string().optional().describe("Filter by repository name"),
         ref: z.string().optional().describe("Filter by ref/tag (supports semver constraints)"),
         limit: z.number().int().positive().max(100).optional().describe("Max results (default 20)"),
+        languages: languagesParam,
       }),
     },
-    async ({ query, repo, ref, limit }) => {
+    async ({ query, repo, ref, limit, languages }) => {
       const results = await searchCode(deps.db, deps.embedder, {
         query,
         repo,
         ref,
         limit: limit ?? 20,
-        languages: deps.languages,
+        languages: resolveLanguages(languages, deps),
       });
 
       if (results.length === 0) return textResult("No results found.");
@@ -148,16 +177,17 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
         symbolName: z.string().describe("Symbol name"),
         ref: z.string().optional().describe("Ref/tag (supports semver constraints)"),
         includeImports: z.boolean().optional().describe("Show files that import this symbol"),
+        languages: languagesParam,
       }),
     },
-    async ({ repo: repoName, symbolName, ref: refParam, includeImports }) => {
+    async ({ repo: repoName, symbolName, ref: refParam, includeImports, languages }) => {
       const resolveResult = await resolveOrError(deps, repoName, refParam);
       if (isToolResult(resolveResult)) return resolveResult;
       const { resolved } = resolveResult;
 
       const result = await getSymbol(deps.db, resolved, symbolName, {
         includeImports,
-        languages: deps.languages,
+        languages: resolveLanguages(languages, deps),
       });
       if (typeof result === "string") return errorResult(result);
 
@@ -194,14 +224,21 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
         kind: z.enum(["file", "symbol"]).describe("What to search for"),
         repo: z.string().describe("Repository name"),
         ref: z.string().optional().describe("Ref/tag (supports semver constraints)"),
+        languages: languagesParam,
       }),
     },
-    async ({ pattern, kind, repo: repoName, ref: refParam }) => {
+    async ({ pattern, kind, repo: repoName, ref: refParam, languages }) => {
       const resolveResult = await resolveOrError(deps, repoName, refParam);
       if (isToolResult(resolveResult)) return resolveResult;
       const { resolved } = resolveResult;
 
-      const result = await findByPattern(deps.db, resolved.ref.id, kind, pattern, deps.languages);
+      const result = await findByPattern(
+        deps.db,
+        resolved.ref.id,
+        kind,
+        pattern,
+        resolveLanguages(languages, deps),
+      );
 
       if (result.kind === "file") {
         if (result.files.length === 0) return textResult("No files matching pattern.");
@@ -289,10 +326,16 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     {
       title: "List Repos",
       description: "List all registered repositories with their indexing status and indexed refs.",
-      inputSchema: z.object({}),
+      inputSchema: z.object({
+        languages: languagesParam,
+      }),
     },
-    async () => {
-      const entries = await listReposWithRefs(deps.db, deps.languages, deps.languageThreshold);
+    async ({ languages }) => {
+      const entries = await listReposWithRefs(
+        deps.db,
+        resolveLanguages(languages, deps),
+        deps.languageThreshold,
+      );
 
       if (entries.length === 0) return textResult("No repositories registered.");
 

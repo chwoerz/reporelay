@@ -4,18 +4,13 @@ RepoRelay implements the [Model Context Protocol](https://modelcontextprotocol.i
 code context directly to LLM agents. The MCP server exposes **7 tools**, **2 resources**, and
 **3 prompts**.
 
-## Transport Modes
+## Server
 
-RepoRelay supports two MCP transport modes:
-
-| Mode  | How                      | Use case                           |
-| ----- | ------------------------ | ---------------------------------- |
-| stdio | `pnpm dev:mcp` (default) | Direct integration with IDE agents |
-| HTTP  | Set `MCP_TRANSPORT=http` | Remote or multi-client setups      |
-
-HTTP mode serves the MCP protocol at `/mcp` and a health check at `/health` on the configured port.
+The MCP server runs as an HTTP service (`pnpm dev:mcp`), serving the MCP protocol at `/mcp` and a health check at `/health` on `MCP_SERVER_PORT` (default 3000). Clients connect through the [MCP proxy](/guide/mcp-integration#mcp-proxy), which handles language auto-detection and forwards requests.
 
 ## Client Configuration
+
+All clients connect via the MCP proxy (`npx reporelay --server <url>`).
 
 ### Claude Desktop / Cursor
 
@@ -24,11 +19,7 @@ HTTP mode serves the MCP protocol at `/mcp` and a health check at `/health` on t
   "mcpServers": {
     "reporelay": {
       "command": "npx",
-      "args": ["tsx", "src/mcp/main.ts"],
-      "env": {
-        "DATABASE_URL": "postgresql://reporelay:reporelay@localhost:5432/reporelay",
-        "EMBEDDING_PROVIDER": "ollama"
-      }
+      "args": ["reporelay", "--server", "http://localhost:3000/mcp"]
     }
   }
 }
@@ -36,16 +27,18 @@ HTTP mode serves the MCP protocol at `/mcp` and a health check at `/health` on t
 
 ### OpenCode
 
-```toml
-[mcp.reporelay]
-type = "local"
-command = "npx"
-args = ["tsx", "src/mcp/main.ts"]
-
-[mcp.reporelay.environment]
-DATABASE_URL = "postgresql://reporelay:reporelay@localhost:5432/reporelay"
-EMBEDDING_PROVIDER = "ollama"
+```json
+{
+  "mcp": {
+    "reporelay": {
+      "type": "local",
+      "command": ["npx", "reporelay", "--server", "http://localhost:3000/mcp"]
+    }
+  }
+}
 ```
+
+See [MCP Integration > Connecting Clients](/guide/mcp-integration#connecting-clients) for remote server examples.
 
 ---
 
@@ -56,17 +49,19 @@ EMBEDDING_PROVIDER = "ollama"
 Hybrid lexical + vector search across indexed repositories. Combines BM25 full-text search with
 vector similarity via Reciprocal Rank Fusion (RRF).
 
-| Parameter | Type   | Required | Description                                     |
-| --------- | ------ | -------- | ----------------------------------------------- |
-| `query`   | string | yes      | Search query (min 1 character)                  |
-| `repo`    | string | no       | Filter by repository name                       |
-| `ref`     | string | no       | Filter by ref/tag (supports semver constraints) |
-| `limit`   | number | no       | Max results, 1-100 (default 20)                 |
+| Parameter   | Type     | Required | Description                                                    |
+| ----------- | -------- | -------- | -------------------------------------------------------------- |
+| `query`     | string   | yes      | Search query (min 1 character)                                 |
+| `repo`      | string   | no       | Filter by repository name                                      |
+| `ref`       | string   | no       | Filter by ref/tag (supports semver constraints)                |
+| `limit`     | number   | no       | Max results, 1-100 (default 20)                                |
+| `languages` | string[] | no       | Language filter override (e.g. `["typescript", "javascript"]`) |
 
 **Example:**
 
 ```
 search_code({ query: "authentication middleware", repo: "my-api", limit: 10 })
+search_code({ query: "auth", languages: ["typescript", "python"] })
 ```
 
 ---
@@ -96,12 +91,13 @@ get_file({ repo: "my-api", path: "src/auth/login.ts", includeSymbols: true })
 Fetch a specific symbol (function, class, interface, etc.) by name. Returns the symbol's source
 code, location, and optionally which files import it.
 
-| Parameter        | Type    | Required | Description                           |
-| ---------------- | ------- | -------- | ------------------------------------- |
-| `repo`           | string  | yes      | Repository name                       |
-| `symbolName`     | string  | yes      | Symbol name to look up                |
-| `ref`            | string  | no       | Ref/tag (supports semver constraints) |
-| `includeImports` | boolean | no       | Show files that import this symbol    |
+| Parameter        | Type     | Required | Description                                                    |
+| ---------------- | -------- | -------- | -------------------------------------------------------------- |
+| `repo`           | string   | yes      | Repository name                                                |
+| `symbolName`     | string   | yes      | Symbol name to look up                                         |
+| `ref`            | string   | no       | Ref/tag (supports semver constraints)                          |
+| `includeImports` | boolean  | no       | Show files that import this symbol                             |
+| `languages`      | string[] | no       | Language filter override (e.g. `["typescript", "javascript"]`) |
 
 **Example:**
 
@@ -115,12 +111,13 @@ get_symbol({ repo: "my-api", symbolName: "buildApp", includeImports: true })
 
 Search for files or symbols by a glob-style name pattern.
 
-| Parameter | Type   | Required | Description                           |
-| --------- | ------ | -------- | ------------------------------------- |
-| `pattern` | string | yes      | Search pattern (glob-style wildcards) |
-| `kind`    | string | yes      | `"file"` or `"symbol"`                |
-| `repo`    | string | yes      | Repository name                       |
-| `ref`     | string | no       | Ref/tag (supports semver constraints) |
+| Parameter   | Type     | Required | Description                                                    |
+| ----------- | -------- | -------- | -------------------------------------------------------------- |
+| `pattern`   | string   | yes      | Search pattern (glob-style wildcards)                          |
+| `kind`      | string   | yes      | `"file"` or `"symbol"`                                         |
+| `repo`      | string   | yes      | Repository name                                                |
+| `ref`       | string   | no       | Ref/tag (supports semver constraints)                          |
+| `languages` | string[] | no       | Language filter override (e.g. `["typescript", "javascript"]`) |
 
 **Example:**
 
@@ -187,12 +184,16 @@ build_context_pack({
 ### `list_repos`
 
 List all registered repositories with their indexing status and indexed refs.
-Takes no parameters.
+
+| Parameter   | Type     | Required | Description                                                    |
+| ----------- | -------- | -------- | -------------------------------------------------------------- |
+| `languages` | string[] | no       | Language filter override (e.g. `["typescript", "javascript"]`) |
 
 **Example:**
 
 ```
 list_repos({})
+list_repos({ languages: ["go", "rust"] })
 ```
 
 ---
@@ -203,21 +204,21 @@ MCP resources allow clients to browse and read indexed content via URI templates
 
 ### File Content
 
-| Property     | Value                           |
-| ------------ | ------------------------------- |
+| Property     | Value                              |
+| ------------ | ---------------------------------- |
 | URI Template | `reporelay://{repo}/{ref}/{path+}` |
-| MIME Type    | `text/plain`                    |
-| Description  | Retrieve indexed file content   |
+| MIME Type    | `text/plain`                       |
+| Description  | Retrieve indexed file content      |
 
 **Example URI:** `reporelay://my-api/v1.0.0/src/auth/login.ts`
 
 ### Directory Tree
 
-| Property     | Value                        |
-| ------------ | ---------------------------- |
+| Property     | Value                           |
+| ------------ | ------------------------------- |
 | URI Template | `reporelay://{repo}/{ref}/tree` |
-| MIME Type    | `text/plain`                 |
-| Description  | List all file paths in a ref |
+| MIME Type    | `text/plain`                    |
+| Description  | List all file paths in a ref    |
 
 **Example URI:** `reporelay://my-api/v1.0.0/tree`
 
@@ -281,3 +282,13 @@ ref: ">=3.0.0"   → resolves to latest matching tag
 ```
 
 This is useful when agents need "the latest v1.x" without knowing the exact version.
+
+---
+
+## Language Filtering
+
+Four tools (`search_code`, `get_symbol`, `find`, `list_repos`) accept an optional `languages` parameter. This allows per-request language filtering — only repos whose indexed refs contain the specified languages above the configured threshold are included in results.
+
+Valid language values: `typescript`, `javascript`, `python`, `go`, `java`, `kotlin`, `rust`, `c`, `cpp`, `markdown`.
+
+When using the [MCP proxy](/guide/mcp-integration#mcp-proxy-remote-server), detected languages from the developer's working directory are automatically injected into these tools. Explicitly provided `languages` values always take priority over auto-detected ones.

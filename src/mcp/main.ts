@@ -2,7 +2,8 @@
  * MCP server entrypoint.
  *
  * Bootstraps DB, creates embedder, then starts the MCP server
- * (stdio or HTTP transport). Migrations are handled by the worker.
+ * as a stateless HTTP service.  Clients connect via the local
+ * MCP proxy (`src/mcp-proxy/`), never directly.
  */
 import { bootstrap, setupGracefulShutdown } from "../core/index.js";
 import { parseLanguageFilter } from "../core/config.js";
@@ -12,7 +13,7 @@ import { startMcpServer } from "./server.js";
 async function main(): Promise<void> {
   const { config, logger, sql, db, embedder } = await bootstrap();
 
-  logger.info({ transport: config.MCP_TRANSPORT }, "Starting MCP server…");
+  logger.info("Starting MCP server (HTTP)…");
 
   // Resolve language filter: explicit env var takes priority, then auto-detect from CWD.
   // Threshold of 0 disables language-based repo filtering entirely.
@@ -41,17 +42,17 @@ async function main(): Promise<void> {
     }
   }
 
-  // Start MCP server
-  await startMcpServer({ db, embedder, config, languages, languageThreshold });
+  // Start MCP HTTP server
+  const httpServer = await startMcpServer({ db, embedder, config, languages, languageThreshold });
 
-  if (config.MCP_TRANSPORT === "http") {
-    logger.info({ port: config.MCP_SERVER_PORT }, "MCP server listening (HTTP)");
+  logger.info({ port: config.MCP_SERVER_PORT }, "MCP server listening (HTTP)");
 
-    // Graceful shutdown (HTTP mode only — stdio is managed by the client)
-    setupGracefulShutdown(logger, "MCP server", [async () => sql.end()]);
-  } else {
-    logger.info("MCP server connected (stdio)");
-  }
+  setupGracefulShutdown(logger, "MCP server", [
+    async () => {
+      httpServer.close();
+      await sql.end();
+    },
+  ]);
 }
 
 main().catch((err) => {

@@ -105,7 +105,6 @@ describe("E2E: git sync → worktree checkout → pipeline → search (integrati
         EMBEDDING_URL: "http://localhost:11434",
         EMBEDDING_MODEL: "nomic-embed-text",
         EMBEDDING_BATCH_SIZE: 64,
-        MCP_TRANSPORT: "stdio",
         MCP_SERVER_PORT: 3000,
         WEB_PORT: 3001,
         GIT_MIRRORS_DIR: mirrorsDir,

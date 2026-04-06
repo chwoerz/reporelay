@@ -167,14 +167,14 @@ Wires retrieval to the MCP SDK. Delegates to the shared service layer.
 
 **Files:**
 
-| File           | Responsibility                                                         |
-| -------------- | ---------------------------------------------------------------------- |
-| `server.ts`    | Factory `createMcpServer(deps)` — McpServer, transport (stdio vs HTTP) |
-| `tools.ts`     | `registerTools(server, deps)` — 7 tools with Zod schemas + handlers    |
-| `resources.ts` | `registerResources(server, deps)` — 2 resource templates               |
-| `prompts.ts`   | `registerPrompts(server, deps)` — 3 prompts                            |
-| `main.ts`      | Standalone MCP entrypoint: DB + migrations + embedder + start          |
-| `index.ts`     | Barrel export                                                          |
+| File           | Responsibility                                                      |
+| -------------- | ------------------------------------------------------------------- |
+| `server.ts`    | Factory `createMcpServer(deps)` — McpServer, stateless HTTP         |
+| `tools.ts`     | `registerTools(server, deps)` — 7 tools with Zod schemas + handlers |
+| `resources.ts` | `registerResources(server, deps)` — 2 resource templates            |
+| `prompts.ts`   | `registerPrompts(server, deps)` — 3 prompts                         |
+| `main.ts`      | Standalone MCP entrypoint: DB + migrations + embedder + start       |
+| `index.ts`     | Barrel export                                                       |
 
 **MCP Tools (7):**
 
@@ -192,12 +192,13 @@ Wires retrieval to the MCP SDK. Delegates to the shared service layer.
 
 **Tasks:**
 
-- [x] MCP server factory: stdio + streamable HTTP transport via `MCP_TRANSPORT` env var
+- [x] MCP server factory: stateless HTTP-only via `createServer` — each request creates a fresh `McpServer` + `StreamableHTTPServerTransport` pair (no sessions); clients connect through the local MCP proxy
 - [x] Language auto-detection: when `MCP_LANGUAGES` is unset, scans CWD for manifest files to auto-populate the language filter; `MCP_LANGUAGE_THRESHOLD` (default 10, 0 = disabled) controls repo filtering strictness
+- [x] Per-request `languages` parameter on 4 tools (`search_code`, `get_symbol`, `find`, `list_repos`) — overrides server-level language filter; validated against `Languages` enum via Zod
 - [x] 7 tool registrations with Zod input schemas and handlers
 - [x] Resources: `reporelay://{repo}/{ref}/{path+}` (file content), `reporelay://{repo}/{ref}/tree` (dir tree)
 - [x] Prompts: `explain-library`, `implement-feature`, `debug-issue`
-- [x] **Tests:** `mcp/tools.test.ts`, `mcp/resources.test.ts`, `mcp/prompts.test.ts`, `mcp/mcp.integration.test.ts` ✅
+- [x] **Tests:** `mcp/tools.test.ts`, `mcp/resources.test.ts`, `mcp/prompts.test.ts`, `mcp/server.test.ts`, `mcp/mcp.integration.test.ts` ✅
 
 ### Step 9 — `src/web/` (Fastify API routes)
 
@@ -213,6 +214,7 @@ GET    /api/repos                                    List all repositories + ref
 GET    /api/repos/:name                              Repository details
 PATCH  /api/repos/:name                              Update repo settings (globPatterns)
 GET    /api/repos/:name/git-refs                     Branches + tags from mirror
+POST   /api/repos/:name/refresh-refs                 Fetch latest refs from remote (git fetch)
 POST   /api/repos/:name/sync                         Enqueue indexing job
 DELETE /api/repos/:name                              Delete repo (cascades)
 DELETE /api/repos/:name/versions/:ref                Delete indexed version
@@ -378,3 +380,37 @@ through to retrieval.
 - [x] `full-flow.integration.test.ts` — complete indexing + search flow
 - [x] `git-worktree-pipeline.integration.test.ts` — worktree checkout + pipeline
 - [x] `ollama-embedding.integration.test.ts` — Ollama embedding provider integration
+
+### Step 14 — `src/mcp-proxy/` (local MCP proxy for remote servers)
+
+Lightweight local stdio proxy that bridges the gap between a developer's
+working directory (where language detection runs) and a remote RepoRelay
+MCP server (where indexing / search happens).
+
+**Architecture:** `Local IDE ──stdio──▶ Proxy ──HTTP──▶ Remote RepoRelay`
+
+**Files:**
+
+| File              | Responsibility                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config.ts`       | Minimal Zod schema (`REPORELAY_URL`, `MCP_LANGUAGES`, `MCP_LANGUAGE_THRESHOLD`, `LOG_LEVEL`), `loadProxyConfig()`, `parseLanguageFilter()` |
+| `proxy-server.ts` | `enrichToolArgs()` (pure, testable), `wireProxy()` (request forwarding), `startProxy()` (creates Client + Server, wires transports)        |
+| `main.ts`         | CLI entrypoint with `--server` flag, language detection from CWD, calls `startProxy()`                                                     |
+
+**Design decisions:**
+
+- **Low-level `Server` class** (not `McpServer`) — perfect for a proxy that forwards raw JSON-RPC messages without converting between JSON Schema and Zod.
+- **`enrichToolArgs()`** only injects languages when (a) the tool is language-aware, (b) the caller didn't already provide `languages`, and (c) there are detected languages available. Caller-provided values always win.
+- **`LANGUAGE_AWARE_TOOLS`** — explicitly declared set: `search_code`, `get_symbol`, `find`, `list_repos`.
+- **`--server` CLI arg** takes priority over `REPORELAY_URL` env var.
+- **Test-friendly** — `startProxy()` accepts optional `clientTransport`/`serverTransport` params; tests use `InMemoryTransport.createLinkedPair()`.- **Same repo, new entrypoint** — not a separate package. `bin` entry in `package.json`: `"reporelay": "./dist/src/mcp-proxy/main.js"`.
+
+**Tasks:**
+
+- [x] Proxy config schema with CLI override support
+- [x] `enrichToolArgs()` pure function for language injection
+- [x] `wireProxy()` — forwards all 7 MCP request types (tools, prompts, resources)
+- [x] `startProxy()` — Client + Server wiring with configurable transports
+- [x] CLI entrypoint with `--server` flag and language auto-detection
+- [x] `package.json` `bin` entry and `dev:proxy` script
+- [x] **Tests:** `mcp-proxy/config.test.ts`, `mcp-proxy/proxy-server.test.ts` ✅

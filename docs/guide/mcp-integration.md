@@ -2,22 +2,66 @@
 
 RepoRelay exposes a rich set of MCP primitives that any compatible client can discover and use.
 
-## Transport Modes
+## Architecture
 
-| Mode                | `MCP_TRANSPORT`   | Description                                                             |
-| :------------------ | :---------------- | :---------------------------------------------------------------------- |
-| **Stdio**           | `stdio` (default) | Standard I/O — for local clients (Cursor, Claude Desktop)               |
-| **Streamable HTTP** | `http`            | HTTP server on `MCP_SERVER_PORT` — for remote deployment, multi-session |
+The MCP server runs as an **HTTP-only** service. Clients connect through the **MCP proxy**, a lightweight local binary that:
 
-When using HTTP transport, the MCP endpoint is at `/mcp` and `/health` is available for status checks.
+1. Runs on the developer's machine as a stdio MCP server
+2. Detects languages from the local working directory
+3. Forwards all requests to the remote RepoRelay HTTP server, injecting detected languages
+
+```
+Local IDE ──stdio──▶ MCP Proxy ──HTTP──▶ RepoRelay MCP Server
+              │                              │
+       detects languages            indexing + search
+       from local CWD               (HTTP on MCP_SERVER_PORT)
+```
+
+The MCP HTTP endpoint is at `/mcp` and a health check is at `/health`. The server is stateless — each request creates a fresh server instance, so no session tracking is needed.
 
 ```bash
-# Stdio (default)
+# Start the MCP server (HTTP)
 pnpm dev:mcp
 
-# HTTP
-MCP_TRANSPORT=http pnpm dev:mcp
+# Start the proxy (connects to the MCP server)
+pnpm dev:proxy
 ```
+
+## MCP Proxy
+
+### Usage
+
+```bash
+# Via CLI argument
+npx reporelay --server https://reporelay.example.com/mcp
+
+# Or via environment variable
+REPORELAY_URL=https://reporelay.example.com/mcp npx reporelay
+
+# Development mode
+pnpm dev:proxy
+```
+
+### How Language Injection Works
+
+The proxy injects detected languages into 4 language-aware tools: `search_code`, `get_symbol`, `find`, and `list_repos`. Injection only happens when:
+
+- The tool is one of the 4 language-aware tools
+- The caller did **not** already provide a `languages` value
+- There are detected languages available
+
+Per-request `languages` values provided by the caller always take priority over auto-detected ones.
+
+### Proxy Configuration
+
+| Variable                 | Default | Description                                                |
+| :----------------------- | :------ | :--------------------------------------------------------- |
+| `REPORELAY_URL`          | —       | Remote RepoRelay MCP endpoint URL                          |
+| `MCP_LANGUAGES`          | —       | Comma-separated language override (skips auto-detection)   |
+| `MCP_LANGUAGE_THRESHOLD` | `10`    | Minimum language_stats % for repo filtering (0 = disabled) |
+| `LOG_LEVEL`              | `info`  | Log level                                                  |
+
+The `--server` CLI argument takes priority over `REPORELAY_URL`.
 
 ## Tools (7)
 
@@ -35,10 +79,20 @@ MCP_TRANSPORT=http pnpm dev:mcp
 
 > **Note:** `sync_repo` and `add_repo` are available via the Web API / admin UI, not as MCP tools.
 
+### Per-Request Language Filtering
+
+Four tools (`search_code`, `get_symbol`, `find`, `list_repos`) accept an optional `languages` parameter — an array of language names that overrides the server-level language filter for that single request. Valid values are: `typescript`, `javascript`, `python`, `go`, `java`, `kotlin`, `rust`, `c`, `cpp`, `markdown`.
+
+```
+search_code({ query: "auth middleware", languages: ["typescript", "javascript"] })
+```
+
+When the MCP proxy is used, detected languages are automatically injected into these tools unless the caller explicitly provides their own `languages` value.
+
 ## Resources
 
-| Resource       | URI Pattern                              | Description           |
-| :------------- | :--------------------------------------- | :-------------------- |
+| Resource       | URI Pattern                                 | Description           |
+| :------------- | :------------------------------------------ | :-------------------- |
 | File Content   | `reporelay://{repo}/{ref}/{path}`           | Read any indexed file |
 | Directory Tree | `reporelay://{repo}/{ref}/tree[/{subtree}]` | Browse the file tree  |
 
@@ -52,19 +106,44 @@ MCP_TRANSPORT=http pnpm dev:mcp
 
 ## Connecting Clients
 
-### Claude Desktop
+All clients connect via the MCP proxy. The proxy runs locally as a stdio server and forwards requests to the RepoRelay HTTP server.
 
-Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+### Claude Desktop / Cursor
+
+Add to your MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
   "mcpServers": {
     "reporelay": {
-      "command": "node",
-      "args": ["--import", "tsx", "/path/to/reporelay/src/mcp/main.ts"],
-      "env": {
-        "DATABASE_URL": "postgresql://reporelay:reporelay@localhost:5432/reporelay"
-      }
+      "command": "npx",
+      "args": ["reporelay", "--server", "http://localhost:3000/mcp"]
+    }
+  }
+}
+```
+
+For a remote server, replace the URL:
+
+```json
+{
+  "mcpServers": {
+    "reporelay": {
+      "command": "npx",
+      "args": ["reporelay", "--server", "https://reporelay.example.com/mcp"]
+    }
+  }
+}
+```
+
+### OpenCode
+
+```json
+{
+  "mcp": {
+    "reporelay": {
+      "type": "local",
+      "command": ["npx", "reporelay", "--server", "http://localhost:3000/mcp"]
     }
   }
 }
@@ -72,4 +151,4 @@ Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/cla
 
 ### Cursor / Windsurf
 
-Point the MCP connection to the stdio command or the HTTP endpoint depending on your transport mode.
+Point the MCP connection to the proxy binary: `npx reporelay --server <url>`.

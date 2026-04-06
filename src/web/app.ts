@@ -298,6 +298,28 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(gitRefs);
   });
 
+  // ── POST /api/repos/:name/refresh-refs ──
+  app.post<{ Params: { name: string } }>(apiPaths.refreshGitRefs, async (req, reply) => {
+    const repo = await requireRepo(repoRepo, req.params.name, reply);
+    if (!repo) return;
+
+    const source = repo.localPath ?? repo.remoteUrl;
+    if (!source) {
+      return reply.status(500).send({ error: "Repository has no configured source." });
+    }
+
+    try {
+      await syncMirror(source, deps.config.GIT_MIRRORS_DIR, repo.name);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ error: msg });
+    }
+
+    const mirrorPath = join(deps.config.GIT_MIRRORS_DIR, `${repo.name}.git`);
+    const gitRefs = await listGitRefs(mirrorPath);
+    return reply.send(gitRefs);
+  });
+
   // ── POST /api/repos/:name/sync ──
   app.post<{ Params: { name: string } }>(apiPaths.syncRepo, async (req, reply) => {
     const parsed = syncBodySchema.safeParse(req.body);

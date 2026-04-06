@@ -10,7 +10,17 @@ import {
   RepoRefRepository,
   PENDING_COMMIT_SHA,
 } from "../storage/repositories/repo-ref-repository.js";
+import { syncMirror, listGitRefs } from "../git/git-sync.js";
 import pino from "pino";
+
+vi.mock("../git/git-sync.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../git/git-sync.js")>();
+  return {
+    ...original,
+    syncMirror: vi.fn().mockResolvedValue("/tmp/reporelay-test-mirrors/test.git"),
+    listGitRefs: vi.fn().mockResolvedValue({ branches: ["main"], tags: ["v1.0.0"] }),
+  };
+});
 
 let db: Db;
 let app: FastifyInstance;
@@ -22,7 +32,6 @@ const mockConfig: Config = {
   EMBEDDING_URL: "http://localhost:11434",
   EMBEDDING_MODEL: "nomic-embed-text",
   EMBEDDING_BATCH_SIZE: 64,
-  MCP_TRANSPORT: "stdio",
   MCP_SERVER_PORT: 3000,
   WEB_PORT: 3001,
   GIT_MIRRORS_DIR: "/tmp/reporelay-test-mirrors",
@@ -212,6 +221,51 @@ describe("Web API (integration)", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe("POST /api/repos/:name/refresh-refs", () => {
+    it("fetches the mirror and returns updated git refs", async () => {
+      const mockedSyncMirror = vi.mocked(syncMirror);
+      const mockedListGitRefs = vi.mocked(listGitRefs);
+      mockedSyncMirror.mockResolvedValue("/tmp/reporelay-test-mirrors/test-repo.git");
+      mockedListGitRefs.mockResolvedValue({
+        branches: ["main", "develop"],
+        tags: ["v1.0.0", "v2.0.0"],
+      });
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/repos/test-repo/refresh-refs",
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.branches).toEqual(["main", "develop"]);
+      expect(body.tags).toEqual(["v1.0.0", "v2.0.0"]);
+      expect(mockedSyncMirror).toHaveBeenCalledWith(
+        "/tmp/test",
+        mockConfig.GIT_MIRRORS_DIR,
+        "test-repo",
+      );
+    });
+
+    it("returns 404 for non-existent repo", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/repos/nope/refresh-refs",
+      });
+      expect(res.statusCode).toBe(404);
+    });
+
+    it("returns 500 when mirror sync fails", async () => {
+      vi.mocked(syncMirror).mockRejectedValueOnce(new Error("Network unreachable"));
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/repos/test-repo/refresh-refs",
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.json().error).toContain("Network unreachable");
     });
   });
 

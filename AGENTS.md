@@ -10,7 +10,7 @@ pnpm build                  # tsc — TypeScript compilation
 pnpm dev                    # Start everything (Postgres + worker + web + UI)
 pnpm dev:worker             # tsx watch src/worker/index.ts
 pnpm dev:web                # tsx watch src/web/main.ts — REST API on :3001
-pnpm dev:mcp                # tsx src/mcp/main.ts — MCP server (stdio)
+pnpm dev:mcp                # tsx src/mcp/main.ts — MCP server (HTTP on :3000)
 pnpm dev:ui                 # Angular dashboard on :4200
 
 pnpm test                   # All tests (unit + integration)

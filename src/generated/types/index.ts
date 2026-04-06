@@ -26,6 +26,7 @@ export type { ImportReference } from "./ImportReference.js";
 export type { IndexingProgress } from "./IndexingProgress.js";
 export type { IndexingStage, IndexingStageEnumKey } from "./IndexingStage.js";
 export type { ListRepos200, ListReposQuery, ListReposQueryResponse } from "./ListRepos.js";
+export type { RefreshGitRefs200, RefreshGitRefs404, RefreshGitRefs500, RefreshGitRefsMutation, RefreshGitRefsMutationResponse, RefreshGitRefsPathParams } from "./RefreshGitRefs.js";
 export type { Repo, RepoMirrorStatusEnumKey } from "./Repo.js";
 export type { RepoRef } from "./RepoRef.js";
 export type { SearchCode200, SearchCode400, SearchCode503, SearchCodeQuery, SearchCodeQueryParams, SearchCodeQueryResponse } from "./SearchCode.js";

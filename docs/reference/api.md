@@ -1,6 +1,6 @@
 # REST API Reference
 
-RepoRelay exposes 18 REST API routes via Fastify 5 with full OpenAPI 3.1 documentation.
+RepoRelay exposes 20 REST API routes via Fastify 5 with full OpenAPI 3.1 documentation.
 Interactive Swagger UI is available at `/docs` when the web server is running.
 
 ## Base URL
@@ -121,6 +121,20 @@ List branches and tags from the git mirror.
   "tags": ["v1.0.0", "v1.1.0"]
 }
 ```
+
+---
+
+### `POST /api/repos/:name/refresh-refs`
+
+Fetch latest refs from the remote (via `git fetch --prune`) and return updated branches and tags. Does not trigger indexing.
+
+| Parameter | Type   | In   | Description     |
+| --------- | ------ | ---- | --------------- |
+| `name`    | string | path | Repository name |
+
+**Response:** `200` — [`GitRefs`](#gitrefs)
+**Error:** `404` — Repository not found
+**Error:** `500` — Mirror sync failed
 
 ---
 
@@ -319,7 +333,15 @@ Build a task-specific context pack from indexed code.
   "mirrorStatus": "ready",
   "mirrorError": null,
   "tokenConfigured": true,
-  "refs": [{ "ref": "v1.0.0", "stage": "ready", "commitSha": "abc123", "indexingError": null }]
+  "refs": [
+    {
+      "ref": "v1.0.0",
+      "stage": "ready",
+      "commitSha": "abc123",
+      "languageStats": null,
+      "indexingError": null
+    }
+  ]
 }
 ```
 
@@ -330,6 +352,7 @@ Build a task-specific context pack from indexed code.
   "ref": "v1.0.0",
   "stage": "ready",
   "commitSha": "abc123def456...",
+  "languageStats": { "typescript": 45.2, "java": 54.8 },
   "indexingError": null
 }
 ```

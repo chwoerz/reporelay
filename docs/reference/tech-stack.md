@@ -7,7 +7,7 @@
 | **Language**         | TypeScript (ESM, strict, ES2022)                     | Type-safe development                       |
 | **Runtime**          | Node.js 22+                                          | Server runtime                              |
 | **Package Manager**  | pnpm 9+                                              | Fast, disk-efficient package management     |
-| **MCP**              | Official MCP TypeScript SDK                          | LLM agent integration (stdio + HTTP)        |
+| **MCP**              | Official MCP TypeScript SDK                          | LLM agent integration (HTTP)                |
 | **HTTP**             | Fastify 5                                            | High-performance REST API                   |
 | **API Contract**     | OpenAPI 3.1 (hand-written spec)                      | API documentation + code generation         |
 | **Codegen**          | Kubb + openapi-typescript                            | Generate types and Zod schemas from OpenAPI |
