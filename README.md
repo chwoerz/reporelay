@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo/logo-text-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="assets/logo/logo-text-light.png">
-    <img alt="RepoRelay — Self-hosted, MCP-native code context engine" src="assets/logo/logo-text-dark.png" width="600">
+    <img alt="RepoRelay — Self-hosted, MCP-native code context engine" src="assets/logo/logo-text-dark.png" width="400">
   </picture>
 </p>
 
