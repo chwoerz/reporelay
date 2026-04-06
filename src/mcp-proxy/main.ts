@@ -17,7 +17,7 @@
 import { parseArgs } from "node:util";
 import pino from "pino";
 import { loadProxyConfig, parseLanguageFilter } from "./config.js";
-import { detectLanguagesFromDir } from "../git/language-detector.js";
+import { detectLanguagesFromDir } from "./languages.js";
 import { startProxy } from "./proxy-server.js";
 
 // ── CLI argument parsing ──

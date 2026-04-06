@@ -24,7 +24,7 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { Logger } from "../core/logger.js";
+import type { Logger } from "pino";
 
 // ── Constants ──
 

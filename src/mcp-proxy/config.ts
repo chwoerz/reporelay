@@ -9,7 +9,7 @@
  *   2. `REPORELAY_URL` environment variable
  */
 import { z } from "zod/v4";
-import { Languages } from "../core/types.js";
+import { Languages } from "./languages.js";
 
 // ── Schema ──
 

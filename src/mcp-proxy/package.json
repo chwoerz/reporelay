@@ -1,0 +1,32 @@
+{
+  "name": "reporelay",
+  "version": "1.0.0",
+  "description": "Local MCP proxy for RepoRelay — auto-detects project languages and forwards requests to a remote RepoRelay server.",
+  "type": "module",
+  "main": "dist/main.js",
+  "bin": {
+    "reporelay": "dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-search",
+    "reporelay"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "zod": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
