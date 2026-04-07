@@ -1,6 +1,8 @@
 node_modules
 dist
 .env
+.env.local
+.env.*.local
 .reporelay/
 *.log
 .DS_Store

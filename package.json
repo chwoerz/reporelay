@@ -29,9 +29,23 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "mcp",
+    "code-search",
+    "tree-sitter",
+    "rag",
+    "context-engine"
+  ],
+  "author": "Christian Woerz",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chwoerz/reporelay.git"
+  },
+  "homepage": "https://chwoerz.github.io/reporelay/",
+  "bugs": {
+    "url": "https://github.com/chwoerz/reporelay/issues"
+  },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/swagger": "^9.7.0",
