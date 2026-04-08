@@ -61,8 +61,12 @@ describe("validateRepoName", () => {
   it("rejects path traversal sequences", () => {
     expect(validateRepoName("..")).toBeTruthy();
     expect(validateRepoName(".")).toBeTruthy();
-    expect(validateRepoName("foo..bar")).toBeTruthy();
     expect(validateRepoName("../etc/passwd")).toBeTruthy();
+  });
+
+  it("accepts names with consecutive dots that are not standalone . or ..", () => {
+    expect(validateRepoName("foo..bar")).toBeNull();
+    expect(validateRepoName("my-project..v2")).toBeNull();
   });
 
   it("rejects names with control characters", () => {

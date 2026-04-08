@@ -590,7 +590,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
 /**
  * Parse the CORS_ORIGIN config string into a Fastify CORS origin value.
  *
- * - undefined / empty → `false` (CORS disabled, same-origin only)
+ * - undefined / empty → `false` (cross-origin requests are blocked)
  * - `"*"`            → `true`  (allow all origins — dev only)
  * - comma-separated  → string array of allowed origins
  */
@@ -610,8 +610,8 @@ const MAX_SEARCH_LIMIT = 100;
 export function validateRepoName(name: string): string | null {
   if (name.length > 255) return "Repository name must be 255 characters or fewer.";
   if (/[/\\]/.test(name)) return "Repository name must not contain path separators.";
-  if (name === "." || name === ".." || name.includes("..")) {
-    return "Repository name must not contain path traversal sequences.";
+  if (name === "." || name === "..") {
+    return "Repository name must not be '.' or '..'.";
   }
   if (/[\x00-\x1f]/.test(name)) return "Repository name must not contain control characters.";
   return null;

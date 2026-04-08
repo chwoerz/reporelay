@@ -34,7 +34,7 @@ COPY package.json drizzle.config.ts openapi.yaml ./
 COPY drizzle/ drizzle/
 
 # Run as non-root user for security
-RUN groupadd -r reporelay && useradd -r -g reporelay -d /app reporelay && \
+RUN groupadd -r reporelay && useradd -r -g reporelay -m -d /home/reporelay reporelay && \
     chown -R reporelay:reporelay /app
 USER reporelay
 
