@@ -35,9 +35,10 @@ const { values } = parseArgs({
 async function main(): Promise<void> {
   const config = loadProxyConfig(process.env, values.server as string | undefined);
 
+  // Write logs to stderr (fd 2) so stdout stays clean for the MCP stdio transport.
   const logger = pino({
     level: config.LOG_LEVEL,
-    transport: { target: "pino-pretty", options: { colorize: true } },
+    transport: { target: "pino-pretty", options: { colorize: true, destination: 2 } },
   });
 
   // Resolve upstream URL

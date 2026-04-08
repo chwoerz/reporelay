@@ -1,6 +1,9 @@
 # ── Shared environment variables (used by worker, web, and mcp) ──
+# NOTE: DATABASE_URL is hardcoded here because Docker containers must reach
+# Postgres via the compose service name ("postgres"), not "localhost" which
+# the .env file uses for local `pnpm dev`.
 x-shared-env: &shared-env
-  DATABASE_URL: ${DATABASE_URL:-postgresql://reporelay:reporelay@postgres:5432/reporelay}
+  DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
   EMBEDDING_URL: http://host.docker.internal:11434
   EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
   GIT_MIRRORS_DIR: /data/mirrors
