@@ -16,6 +16,15 @@ export const configSchema = z.object({
   EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
   EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
 
+  // CORS
+  /**
+   * Comma-separated list of allowed CORS origins.
+   * When unset, only same-origin requests are allowed (CORS disabled).
+   * Use "*" to allow all origins (development only — NOT recommended for production).
+   * Example: "http://localhost:4200,https://my-app.example.com"
+   */
+  CORS_ORIGIN: z.string().optional(),
+
   // MCP
   MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
   /**

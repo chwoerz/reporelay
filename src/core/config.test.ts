@@ -37,6 +37,21 @@ describe("Config", () => {
     expect(loadConfig({ MCP_SERVER_PORT: "4000" }).MCP_SERVER_PORT).toBe(4000);
   });
 
+  it("CORS_ORIGIN defaults to undefined", () => {
+    const config = loadConfig({});
+    expect(config.CORS_ORIGIN).toBeUndefined();
+  });
+
+  it("CORS_ORIGIN stores raw comma-separated string", () => {
+    const config = loadConfig({ CORS_ORIGIN: "http://localhost:4200,https://app.example.com" });
+    expect(config.CORS_ORIGIN).toBe("http://localhost:4200,https://app.example.com");
+  });
+
+  it("CORS_ORIGIN accepts wildcard", () => {
+    const config = loadConfig({ CORS_ORIGIN: "*" });
+    expect(config.CORS_ORIGIN).toBe("*");
+  });
+
   it("MCP_LANGUAGES defaults to undefined", () => {
     const config = loadConfig({});
     expect(config.MCP_LANGUAGES).toBeUndefined();
