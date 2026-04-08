@@ -1,6 +1,6 @@
 # ── Shared environment variables (used by worker, web, and mcp) ──
 x-shared-env: &shared-env
-  DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
+  DATABASE_URL: ${DATABASE_URL:-postgresql://reporelay:reporelay@postgres:5432/reporelay}
   EMBEDDING_URL: http://host.docker.internal:11434
   EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
   GIT_MIRRORS_DIR: /data/mirrors
@@ -9,13 +9,13 @@ x-shared-env: &shared-env
 services:
   # ── ParadeDB (Postgres + pgvector + pg_trgm + pg_search) ──
   postgres:
-    image: paradedb/paradedb:latest
+    image: paradedb/paradedb:0.13.1
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: reporelay
       POSTGRES_USER: reporelay
-      POSTGRES_PASSWORD: reporelay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reporelay}
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:

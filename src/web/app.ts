@@ -204,6 +204,11 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     }
     const { name, localPath, remoteUrl, defaultBranch } = parsed.data;
 
+    const nameError = validateRepoName(name);
+    if (nameError) {
+      return reply.status(400).send({ error: nameError });
+    }
+
     if (!localPath && !remoteUrl) {
       return reply
         .status(400)
@@ -442,7 +447,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
       query,
       repo,
       ref,
-      limit: limit ? parseInt(limit, 10) : 20,
+      limit: limit ? Math.min(Math.max(parseInt(limit, 10), 1), MAX_SEARCH_LIMIT) : 20,
     });
 
     return reply.send(results);
@@ -580,10 +585,46 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
   });
 }
 
+// ── Helpers ──
+
+/**
+ * Parse the CORS_ORIGIN config string into a Fastify CORS origin value.
+ *
+ * - undefined / empty → `false` (CORS disabled, same-origin only)
+ * - `"*"`            → `true`  (allow all origins — dev only)
+ * - comma-separated  → string array of allowed origins
+ */
+export function parseCorsOrigin(raw?: string): boolean | string[] {
+  if (!raw || !raw.trim()) return false;
+  if (raw.trim() === "*") return true;
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/** Maximum allowed value for the search `limit` query parameter. */
+const MAX_SEARCH_LIMIT = 100;
+
+/**
+ * Validate a repository name to prevent path-traversal and filesystem issues.
+ * Returns an error string if invalid, or `null` if acceptable.
+ */
+export function validateRepoName(name: string): string | null {
+  if (name.length > 255) return "Repository name must be 255 characters or fewer.";
+  if (/[/\\]/.test(name)) return "Repository name must not contain path separators.";
+  if (name === "." || name === ".." || name.includes("..")) {
+    return "Repository name must not contain path traversal sequences.";
+  }
+  if (/[\x00-\x1f]/.test(name)) return "Repository name must not contain control characters.";
+  return null;
+}
+
 // ── Factory ──
 
 export function buildApp(deps: AppDeps): FastifyInstance {
-  const app = Fastify({ logger: false });
+  const app = Fastify({
+    logger: false,
+    bodyLimit: 1_048_576, // 1 MB
+    requestTimeout: 120_000, // 2 minutes
+  });
 
   const ctx: RouteContext = {
     deps,
@@ -593,7 +634,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     mirrorStatus: new Map(),
   };
 
-  app.register(cors, { origin: true });
+  app.register(cors, {
+    origin: parseCorsOrigin(deps.config.CORS_ORIGIN),
+  });
 
   // Serve OpenAPI spec + Swagger UI at /docs
   const specDir = new URL("../../", import.meta.url).pathname;

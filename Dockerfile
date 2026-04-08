@@ -33,5 +33,10 @@ COPY --from=build /app/dist/ ./dist/
 COPY package.json drizzle.config.ts openapi.yaml ./
 COPY drizzle/ drizzle/
 
+# Run as non-root user for security
+RUN groupadd -r reporelay && useradd -r -g reporelay -d /app reporelay && \
+    chown -R reporelay:reporelay /app
+USER reporelay
+
 # Default: worker (override via docker-compose `command`)
 CMD ["node", "dist/src/worker/index.js"]
