@@ -141,7 +141,6 @@ describe("handleIndexJob", () => {
       name: "test-repo",
       localPath: "/tmp/repo",
       remoteUrl: null,
-      defaultBranch: "main",
       globPatterns: [],
     });
     mockFindByRepoAndRef.mockResolvedValue({

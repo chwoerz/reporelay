@@ -144,7 +144,6 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
         payload: {
           name: repo.name,
           localPath: repo.path,
-          defaultBranch: "main",
         },
       });
       expect(res.statusCode).toBe(201);
@@ -386,7 +385,6 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
         payload: {
           name: badRepoName,
           localPath: "/nonexistent/path/to/repo",
-          defaultBranch: "main",
         },
       });
       expect(res.statusCode).toBe(201);

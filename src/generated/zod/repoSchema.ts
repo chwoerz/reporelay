@@ -11,7 +11,6 @@ export const repoSchema = z.object({
 "name": z.string(),
 "localPath": z.string().nullish(),
 "remoteUrl": z.string().nullish(),
-"defaultBranch": z.string(),
 "globPatterns": z.array(z.string()),
 "createdAt": z.iso.datetime(),
 "mirrorStatus": z.optional(z.enum(["cloning", "ready", "error"])),

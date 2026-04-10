@@ -15,8 +15,6 @@
 @if (repo.value(); as r) {
   <h2>{{ r.name }}</h2>
   <dl>
-    <dt>Default branch</dt>
-    <dd>{{ r.defaultBranch }}</dd>
     @if (r.localPath) {
       <dt>Local path</dt>
       <dd>{{ r.localPath }}</dd>

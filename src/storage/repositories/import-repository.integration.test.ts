@@ -25,7 +25,6 @@ describe("ImportRepository (integration)", () => {
     const repoRepo = new RepoRepository(db);
     const repo = await repoRepo.insertOne({
       name: "import-repo-test",
-      defaultBranch: "main",
     });
 
     const refRepo = new RepoRefRepository(db);

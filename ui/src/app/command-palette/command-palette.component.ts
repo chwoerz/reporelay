@@ -149,7 +149,7 @@ export class CommandPaletteComponent
 
     // Per-repo actions (browse files, view symbols, build context)
     this.repos.forEach((repo) => {
-      const defaultRef = repo.defaultBranch ?? repo.refs[0]?.ref;
+      const defaultRef = repo.refs[0]?.ref;
       if (defaultRef) {
         items.push({
           id: `browse-${repo.name}`,

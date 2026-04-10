@@ -40,7 +40,6 @@ describe("Hybrid Search (integration)", () => {
     repoRow = await repoRepo.insertOne({
       name: "test-repo",
       localPath: repo.path,
-      defaultBranch: "main",
     });
 
     const refRepo = new RepoRefRepository(db);

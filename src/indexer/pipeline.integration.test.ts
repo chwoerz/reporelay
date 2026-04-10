@@ -39,7 +39,6 @@ describe("Indexing Pipeline (integration)", () => {
     repoRow = await repoRepo.insertOne({
       name: repo.name,
       localPath: repo.path,
-      defaultBranch: "main",
     });
 
     const refRepo = new RepoRefRepository(db);

@@ -355,7 +355,6 @@ describe("Web API (integration)", () => {
       const repo = await repoRepo.insertOne({
         name: "cancel-test-repo",
         localPath: "/tmp/cancel-test",
-        defaultBranch: "main",
       });
       const refRepo = new RepoRefRepository(db);
       await refRepo.insertOne({
@@ -398,7 +397,6 @@ describe("Web API (integration)", () => {
       const repo = await repoRepo.insertOne({
         name: "cancel-ref-test",
         localPath: "/tmp/cancel-ref",
-        defaultBranch: "main",
       });
       const refRepo = new RepoRefRepository(db);
       await refRepo.insertOne({

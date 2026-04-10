@@ -47,7 +47,6 @@ const REPO_ROW = {
   name: "my-lib",
   remoteUrl: "https://github.com/org/my-lib",
   localPath: null,
-  defaultBranch: "main",
   createdAt: new Date(),
   updatedAt: new Date(),
 };

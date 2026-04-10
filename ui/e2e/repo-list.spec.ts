@@ -70,7 +70,6 @@ test.describe("Repo list page", () => {
             name: "new-repo",
             localPath: "/tmp/new-repo",
             remoteUrl: null,
-            defaultBranch: "main",
             tokenConfigured: false,
             mirrorStatus: "cloning",
             mirrorError: null,

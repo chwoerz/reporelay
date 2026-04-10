@@ -31,10 +31,6 @@ export type Repo = {
     */
     remoteUrl?: string | null;
     /**
-     * @type string
-    */
-    defaultBranch: string;
-    /**
      * @type array
     */
     globPatterns: string[];

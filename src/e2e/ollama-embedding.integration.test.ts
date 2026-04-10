@@ -110,7 +110,6 @@ describe("E2E: Repository indexing with Ollama embeddings (integration)", () => 
     repoRow = await repoRepo.insertOne({
       name: repo.name,
       localPath: repo.path,
-      defaultBranch: "main",
     });
 
     const refRepo = new RepoRefRepository(db);

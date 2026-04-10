@@ -19,10 +19,6 @@ export type CreateRepoBody = {
     */
     remoteUrl?: string;
     /**
-     * @type string | undefined
-    */
-    defaultBranch?: string;
-    /**
      * @type array | undefined
     */
     globPatterns?: string[];

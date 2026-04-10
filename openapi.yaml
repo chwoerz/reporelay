@@ -608,7 +608,7 @@ components:
 
     Repo:
       type: object
-      required: [id, name, defaultBranch, globPatterns, createdAt, refs]
+      required: [id, name, globPatterns, createdAt, refs]
       properties:
         id:
           type: integer
@@ -618,8 +618,6 @@ components:
           type: ["string", "null"]
         remoteUrl:
           type: ["string", "null"]
-        defaultBranch:
-          type: string
         globPatterns:
           type: array
           items:
@@ -649,8 +647,6 @@ components:
         localPath:
           type: string
         remoteUrl:
-          type: string
-        defaultBranch:
           type: string
         globPatterns:
           type: array

@@ -131,7 +131,7 @@ The worker automatically bootstraps the database on first startup (extensions, m
 # Register a repo
 curl -sS -X POST http://localhost:3001/api/repos \
   -H 'content-type: application/json' \
-  -d '{"name":"my-repo","localPath":"/absolute/path/to/my-repo","defaultBranch":"main"}'
+  -d '{"name":"my-repo","localPath":"/absolute/path/to/my-repo"}'
 
 # Trigger indexing
 curl -sS -X POST http://localhost:3001/api/repos/my-repo/sync \

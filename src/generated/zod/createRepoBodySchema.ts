@@ -9,6 +9,5 @@ export const createRepoBodySchema = z.object({
     "name": z.string().min(1),
 "localPath": z.optional(z.string()),
 "remoteUrl": z.optional(z.string()),
-"defaultBranch": z.optional(z.string()),
 "globPatterns": z.optional(z.array(z.string()))
     })

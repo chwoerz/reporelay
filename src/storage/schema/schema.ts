@@ -30,7 +30,6 @@ export const repos = pgTable("repos", {
   name: text("name").notNull().unique(),
   localPath: text("local_path"),
   remoteUrl: text("remote_url"),
-  defaultBranch: text("default_branch").notNull(),
   globPatterns: text("glob_patterns").array().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

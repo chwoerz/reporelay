@@ -60,25 +60,23 @@ describe("Storage Schema (integration)", () => {
   });
 
   describe("repos table", () => {
-    it("inserts a repo with name, localPath, defaultBranch", async () => {
+    it("inserts a repo with name and localPath", async () => {
       const repoRepo = new RepoRepository(db);
       const repo = await repoRepo.insertOne({
         name: "test-repo-insert",
         localPath: "/tmp/test",
-        defaultBranch: "main",
       });
       expect(repo.id).toBeTypeOf("number");
       expect(repo.name).toBe("test-repo-insert");
       expect(repo.localPath).toBe("/tmp/test");
-      expect(repo.defaultBranch).toBe("main");
       expect(repo.createdAt).toBeInstanceOf(Date);
     });
 
     it("enforces unique repo name", async () => {
       const repoRepo = new RepoRepository(db);
-      await repoRepo.insertOne({ name: "unique-test", defaultBranch: "main" });
+      await repoRepo.insertOne({ name: "unique-test" });
       await expect(
-        repoRepo.insertOne({ name: "unique-test", defaultBranch: "main" }),
+        repoRepo.insertOne({ name: "unique-test" }),
       ).rejects.toThrow();
     });
 
@@ -92,7 +90,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "cascade-test",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,
@@ -154,7 +151,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "ref-test-repo",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,
@@ -175,7 +171,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "semver-test-repo",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,
@@ -193,7 +188,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "status-update-repo",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,
@@ -213,7 +207,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "unique-ref-repo",
-        defaultBranch: "main",
       });
       await refRepo.insertOne({
         repoId: repo.id,
@@ -252,7 +245,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "file-test-repo",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,
@@ -283,7 +275,6 @@ describe("Storage Schema (integration)", () => {
 
       const repo = await repoRepo.insertOne({
         name: "file-unique-repo",
-        defaultBranch: "main",
       });
       const ref = await refRepo.insertOne({
         repoId: repo.id,

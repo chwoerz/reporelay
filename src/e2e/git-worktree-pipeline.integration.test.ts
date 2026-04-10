@@ -90,7 +90,6 @@ describe("E2E: git sync → worktree checkout → pipeline → search (integrati
       await repoRepo.insertOne({
         name: repo.name,
         localPath: repo.path,
-        defaultBranch: "main",
       });
 
       const row = await repoRepo.findByName(repo.name);

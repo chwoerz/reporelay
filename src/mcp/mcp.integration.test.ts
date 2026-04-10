@@ -53,7 +53,6 @@ describe("MCP Server (integration)", () => {
     const repoRow = await repoRepo.insertOne({
       name: "mcp-test-repo",
       localPath: repo.path,
-      defaultBranch: "main",
     });
     repoId = repoRow.id;
 

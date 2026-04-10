@@ -202,7 +202,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]!.message });
     }
-    const { name, localPath, remoteUrl, defaultBranch } = parsed.data;
+    const { name, localPath, remoteUrl } = parsed.data;
 
     const nameError = validateRepoName(name);
     if (nameError) {
@@ -224,7 +224,6 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
       name,
       localPath: localPath ?? null,
       remoteUrl: remoteUrl ?? null,
-      defaultBranch: defaultBranch ?? "main",
       globPatterns: parsed.data.globPatterns ?? [],
     });
 

@@ -31,7 +31,6 @@ export interface ResolvedRepoRef {
     name: string;
     localPath: string | null;
     remoteUrl: string | null;
-    defaultBranch: string;
   };
   ref: { id: number; commitSha: string; ref: string };
 }

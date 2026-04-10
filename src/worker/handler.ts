@@ -44,7 +44,6 @@ interface ResolvedRepo {
   source: string;
   localPath: string | null;
   remoteUrl: string | null;
-  defaultBranch: string;
   globPatterns: string[];
 }
 
