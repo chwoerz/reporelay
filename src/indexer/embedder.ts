@@ -91,7 +91,9 @@ export class OllamaEmbedder implements Embedder {
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`Ollama embed failed (${response.status}): ${body} : [${texts.join(", ")}]`);
+      throw new Error(
+        `Ollama embed failed (${response.status}): ${body}`,
+      );
     }
 
     const data = (await response.json()) as OllamaEmbedResponse;
