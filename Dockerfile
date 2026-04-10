@@ -35,7 +35,8 @@ COPY drizzle/ drizzle/
 
 # Run as non-root user for security
 RUN groupadd -r reporelay && useradd -r -g reporelay -m -d /home/reporelay reporelay && \
-    chown -R reporelay:reporelay /app
+    mkdir -p /data/mirrors /data/worktrees && \
+    chown -R reporelay:reporelay /app /data
 USER reporelay
 
 # Default: worker (override via docker-compose `command`)

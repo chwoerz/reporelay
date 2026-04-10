@@ -119,7 +119,7 @@ async function upsertRepoRef(
     await refRepo.updateWhere(eq(repoRefs.id, opts.existingRef.id), {
       commitSha: opts.commitSha,
       stage: "syncing",
-      stageMessage: "Starting indexing…",
+      stageMessage: "Mirror synced, preparing indexing…",
       semver: opts.semver ?? null,
       indexingStartedAt: new Date(),
       indexingError: null,
@@ -136,7 +136,7 @@ async function upsertRepoRef(
     ref: opts.ref,
     commitSha: opts.commitSha,
     stage: "syncing",
-    stageMessage: "Starting indexing…",
+    stageMessage: "Mirror synced, preparing indexing…",
     semver: opts.semver ?? null,
     indexingStartedAt: new Date(),
   });
@@ -272,6 +272,15 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
     // this point on (the sync endpoint creates it before enqueuing).
     const queuedRef = await refRepo.findByRepoAndRef(repo.id, job.ref);
     if (queuedRef) repoRefId = queuedRef.id;
+
+    // Transition to "syncing" immediately so the UI reflects that the
+    // worker is actively cloning / fetching the mirror (the slow step).
+    if (repoRefId) {
+      await refRepo.updateProgress(repoRefId, {
+        stage: "syncing",
+        stageMessage: `Cloning/fetching mirror for ${repo.name}…`,
+      });
+    }
 
     // 2. Sync mirror & resolve commit
     const sync = await syncAndResolve({

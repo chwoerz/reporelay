@@ -92,7 +92,7 @@ export class OllamaEmbedder implements Embedder {
     if (!response.ok) {
       const body = await response.text();
       throw new Error(
-        `Ollama embed failed (${response.status}): ${body}`,
+        `Ollama embed failed (${response.status}): ${body} text: ${texts.join(", ")}`,
       );
     }
 

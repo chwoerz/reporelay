@@ -4,6 +4,21 @@
   margin-bottom: 1.5rem;
 }
 
+.hint {
+  color: var(--cw-amber);
+  background: var(--cw-amber-subtle);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  max-width: 640px;
+}
+
+.hint a {
+  color: var(--cw-amber);
+  text-decoration: underline;
+}
+
 .form {
   max-width: 640px;
 }

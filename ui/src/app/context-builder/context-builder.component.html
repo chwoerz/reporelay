@@ -6,6 +6,10 @@
 <h2>Context Builder</h2>
 <p class="subtitle">Build task-specific code context packs for LLM prompts.</p>
 
+@if (noIndexedRefs()) {
+  <p class="hint">No indexed refs available. <a [routerLink]="['/', repoName()]">Index a ref</a> first to use the context builder.</p>
+}
+
 <form (submit)="build($event)" class="form" [class.context-loading-glow]="loading()">
   <div class="form-row">
     <label class="form-label">Strategy</label>
@@ -19,7 +23,7 @@
 
   <div class="form-row">
     <label class="form-label">Ref / tag</label>
-    @if (gitRefs.value(); as refs) {
+    @if (indexedGitRefs(); as refs) {
       <app-ref-picker
         [gitRefs]="refs"
         placeholder="e.g. v1.0.0, main, ^2.0.0"
@@ -33,7 +37,7 @@
   @if (strategy() === 'recent-changes') {
     <div class="form-row">
       <label class="form-label">From ref (base)</label>
-      @if (gitRefs.value(); as refs) {
+      @if (indexedGitRefs(); as refs) {
         <app-ref-picker
           [gitRefs]="refs"
           placeholder="e.g. v1.0.0"
@@ -66,7 +70,7 @@
       <span class="spinner spinner-sm spinner-cyan"></span>
     </button>
   } @else {
-    <button class="btn btn-primary" type="submit">
+    <button class="btn btn-primary" type="submit" [disabled]="noIndexedRefs()">
       <span class="mi">build</span> Build Context Pack
     </button>
   }

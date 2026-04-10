@@ -192,4 +192,17 @@ describe("handleIndexJob", () => {
 
     expect(mockRunPipeline).not.toHaveBeenCalled();
   });
+
+  it("transitions to syncing with descriptive message before mirror clone", async () => {
+    await handleIndexJob(job, fakeDeps);
+
+    // The very first updateProgress call should be the syncing transition
+    // that happens before syncMirror is invoked.
+    expect(mockUpdateProgress).toHaveBeenCalled();
+    const firstCall = mockUpdateProgress.mock.calls[0]!;
+    expect(firstCall[1]).toMatchObject({
+      stage: "syncing",
+      stageMessage: expect.stringContaining("Cloning/fetching mirror"),
+    });
+  });
 });

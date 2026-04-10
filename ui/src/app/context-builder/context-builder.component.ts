@@ -3,7 +3,7 @@ import { ActivatedRoute, RouterLink } from "@angular/router";
 import { HttpClient, httpResource } from "@angular/common/http";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { map } from "rxjs";
-import type { ContextPackResult, GitRefs } from "../types";
+import type { ContextPackResult, GitRefs, Repo } from "../types";
 import { HighlightPipe } from "../shared/highlight.pipe";
 import { RefPickerComponent } from "../shared/ref-picker/ref-picker.component";
 
@@ -23,9 +23,42 @@ export class ContextBuilderComponent {
 
   repoName = computed(() => this.params());
 
-  gitRefs = httpResource<GitRefs>(() => {
+  /** Full repo data including indexed refs with their stages. */
+  private repo = httpResource<Repo>(() => {
+    const name = this.repoName();
+    return name ? `/api/repos/${name}` : undefined;
+  });
+
+  /** Raw git refs from the mirror (branches + tags). */
+  private gitRefs = httpResource<GitRefs>(() => {
     const name = this.repoName();
     return name ? `/api/repos/${name}/git-refs` : undefined;
+  });
+
+  /**
+   * Git refs filtered to only those that have been indexed (stage "ready").
+   * The ref-picker receives this so users can only select usable refs.
+   */
+  indexedGitRefs = computed<GitRefs | undefined>(() => {
+    const repo = this.repo.value();
+    const refs = this.gitRefs.value();
+    if (!repo || !refs) return undefined;
+
+    const readyRefs = new Set(
+      repo.refs.filter((r) => r.stage === "ready").map((r) => r.ref),
+    );
+
+    return {
+      branches: refs.branches.filter((b) => readyRefs.has(b)),
+      tags: refs.tags.filter((t) => readyRefs.has(t)),
+    };
+  });
+
+  /** True when repo data loaded but no refs have been indexed yet. */
+  noIndexedRefs = computed(() => {
+    const repo = this.repo.value();
+    if (!repo) return false;
+    return !repo.refs.some((r) => r.stage === "ready");
   });
 
   strategy = signal("explain");
