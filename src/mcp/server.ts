@@ -18,7 +18,6 @@ import { registerTools } from "./tools.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
 
-// ── Dependencies ──
 
 export interface McpDeps {
   db: Db;
@@ -33,7 +32,6 @@ export interface McpDeps {
   languageThreshold?: number;
 }
 
-// ── Factory ──
 
 /**
  * Create and configure the McpServer with all tools, resources, and prompts.
@@ -51,7 +49,6 @@ export function createMcpServer(deps: McpDeps): McpServer {
   return server;
 }
 
-// ── HTTP Server ──
 
 /**
  * Start the MCP server as a stateless HTTP service.

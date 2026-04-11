@@ -29,7 +29,6 @@ import type { IndexJob } from "../core/types.js";
 import type { Config } from "../core/config.js";
 import type { Logger } from "../core/logger.js";
 
-// ── Types ──
 
 export interface WorkerDeps {
   db: Db;
@@ -53,7 +52,6 @@ interface SyncResult {
   semver: string | undefined;
 }
 
-// ── Helpers ──
 
 /**
  * Try to extract a clean semver string from a ref name.
@@ -63,7 +61,6 @@ export function parseSemver(ref: string): string | undefined {
   return semver.clean(ref) ?? undefined;
 }
 
-// ── Step functions ──
 
 /** Look up the repo by name and determine its git source. Returns null on failure. */
 async function resolveRepoSource(
@@ -254,7 +251,6 @@ function pipelineProgressCallback(
   };
 }
 
-// ── Main handler ──
 
 /**
  * Handle a single index job end-to-end.

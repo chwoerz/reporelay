@@ -2,7 +2,6 @@
  * Shared types and interfaces used across all modules.
  */
 
-// ── Language ──
 
 export const Languages = [
   "typescript",
@@ -26,7 +25,6 @@ export type Language = (typeof Languages)[number];
  */
 export type LanguageStats = Partial<Record<Language, number>>;
 
-// ── Symbol kinds ──
 
 export const SymbolKinds = [
   "function",
@@ -46,7 +44,6 @@ export const SymbolKinds = [
 
 export type SymbolKind = (typeof SymbolKinds)[number];
 
-// ── Parsed symbol ──
 
 export interface ParsedSymbol {
   name: string;
@@ -63,7 +60,6 @@ export interface ParsedSymbol {
   content: string;
 }
 
-// ── Import ──
 
 export interface ParsedImport {
   /** Module specifier (e.g. `./foo`, `node:events`, `react`) */
@@ -76,20 +72,16 @@ export interface ParsedImport {
   isNamespace?: boolean;
 }
 
-// ── Parse result ──
 
 export interface ParseResult {
   symbols: ParsedSymbol[];
   imports: ParsedImport[];
 }
 
-// ── Indexing stage (re-export from generated OpenAPI types) ──
 
 export { indexingStageEnum, type IndexingStage } from "../generated/types/IndexingStage.js";
 
-// ── Stored symbol (DB row) — use Drizzle-inferred types from schema.ts instead ──
 
-// ── Search result ──
 
 export interface SearchResult {
   filePath: string;
@@ -102,12 +94,10 @@ export interface SearchResult {
   symbolName?: string;
 }
 
-// ── Context pack strategy ──
 
 export const ContextStrategies = ["explain", "implement", "debug", "recent-changes"] as const;
 export type ContextStrategy = (typeof ContextStrategies)[number];
 
-// ── Index job ──
 
 export interface IndexJob {
   repo: string;

@@ -21,9 +21,7 @@ import type { Db } from "../storage/index.js";
 import type { Embedder } from "../indexer/embedder.js";
 import type { SearchResult } from "../core/types.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Tuning constants
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Standard RRF smoothing constant.
@@ -49,9 +47,7 @@ const OVERFETCH_MULTIPLIER = 3;
 /** Absolute cap on branch-local retrieval volume. */
 const MAX_FETCH = 300;
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Public types
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Query text after lightweight rewriting.
@@ -105,9 +101,7 @@ type SearchRow = {
   score: number | string;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Query preprocessing
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Split the raw user query into:
@@ -154,9 +148,7 @@ function clampLimit(limit?: number): number {
   return Math.max(1, Math.min(MAX_LIMIT, n));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SQL predicate / fragment builders
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Build the repo/ref/language predicate used by both retrieval branches.
@@ -369,9 +361,7 @@ function buildFinalSelect(fetchLimit: number) {
   `;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Post-processing
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Remove overlapping chunks from the same repo/ref/file.
@@ -423,9 +413,7 @@ export function mapSearchRow(row: SearchRow): SearchResult {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Main search entry point
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Run hybrid retrieval for a user query.

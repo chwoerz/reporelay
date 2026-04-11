@@ -16,11 +16,9 @@ import { createDb, type Db } from "../storage/index.js";
 import { runMigrations } from "../storage/index.js";
 import { createEmbedder, OPENAI_DEFAULT_BASE_URL, type Embedder, type EmbedderOptions } from "../indexer/embedder.js";
 
-// ── Provider-specific default URLs ──
 
 const OLLAMA_DEFAULT_URL = "http://localhost:11434";
 
-// ── Secret masking ──
 
 /** Keys whose values must be redacted in log output. */
 const SECRET_KEYS = ["DATABASE_URL", "OPENAI_API_KEY"];
@@ -41,14 +39,12 @@ export function redactConfig(config: Config): Record<string, unknown> {
   );
 }
 
-// ── Bootstrap options ──
 
 export interface BootstrapOptions {
   /** When true, run Drizzle migrations before returning. Only the worker should set this. */
   migrate?: boolean;
 }
 
-// ── Bootstrap result ──
 
 export interface BootstrapResult {
   config: Config;
@@ -115,7 +111,6 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapR
   return { config, logger, sql, db, embedder };
 }
 
-// ── Graceful shutdown ──
 
 /**
  * Register async cleanup functions that run on SIGTERM/SIGINT via `exit-hook`.

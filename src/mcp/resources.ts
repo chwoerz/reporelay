@@ -18,7 +18,6 @@ import {
   listFilePaths,
 } from "../services/index.js";
 
-// ── Helpers ──
 
 /**
  * Build the resource listing (repo + ready refs) shared by both resources.
@@ -40,11 +39,9 @@ async function listReadyRepoRefs(
   return { resources };
 }
 
-// ── Registration ──
 
 export function registerResources(server: McpServer, deps: McpDeps): void {
-  // ── File content resource ──
-  server.registerResource(
+    server.registerResource(
     "file-content",
     new ResourceTemplate("reporelay://{repo}/{ref}/{path+}", {
       list: () =>
@@ -82,8 +79,7 @@ export function registerResources(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── Directory tree resource ──
-  server.registerResource(
+    server.registerResource(
     "directory-tree",
     new ResourceTemplate("reporelay://{repo}/{ref}/tree", {
       list: () =>

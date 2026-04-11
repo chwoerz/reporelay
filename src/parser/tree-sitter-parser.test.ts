@@ -11,7 +11,6 @@ import {
   CPP_SAMPLE,
 } from "../../test/fixtures/samples.js";
 
-// ── helpers ──
 
 const ts = () => parseWithTreeSitter(TYPESCRIPT_SAMPLE, "typescript", "service.ts");
 const py = () => parseWithTreeSitter(PYTHON_SAMPLE, "python", "calculator.py");

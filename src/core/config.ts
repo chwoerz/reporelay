@@ -4,7 +4,6 @@
  */
 import {z} from "zod/v4";
 
-// ── Schema ──
 
 export const EmbeddingProviders = ["ollama", "openai"] as const;
 
@@ -101,7 +100,6 @@ export const configSchema = z
 
 export type Config = z.infer<typeof configSchema>;
 
-// ── Loader ──
 
 /**
  * Load and validate configuration from environment variables.

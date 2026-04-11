@@ -258,8 +258,7 @@ describe("Indexing Pipeline (integration)", () => {
     });
   });
 
-  // ── Out-of-order indexing ──
-  // At this point v1.0.0 and v2.0.0 are already indexed.
+    // At this point v1.0.0 and v2.0.0 are already indexed.
   // v2.0.0 has: service.ts (modified), new-file.ts (added), calculator.py (deleted).
   // We now create v1.1.0 branching from the v1.0.0 commit — a minor update that
   // adds src/utils.ts and tweaks service.ts, but keeps calculator.py.

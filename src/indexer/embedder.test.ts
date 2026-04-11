@@ -269,8 +269,7 @@ describe("Embedder", () => {
     });
   });
 
-  // ── OllamaEmbedder.init() dimension validation ──
-
+  
   describe("OllamaEmbedder.init()", () => {
     it("succeeds when probe returns vectors matching DB_EMBEDDING_DIMENSIONS", async () => {
       fetchSpy.mockResolvedValueOnce(
@@ -340,8 +339,7 @@ describe("Embedder", () => {
     });
   });
 
-  // ── OpenaiEmbedder ──
-
+  
   describe("OpenaiEmbedder", () => {
     /** Helper: build a valid OpenAI embeddings API response. */
     function openaiResponse(embeddings: number[][]): Response {
@@ -546,8 +544,7 @@ describe("Embedder", () => {
     });
   });
 
-  // ── createEmbedder factory ──
-
+  
   describe("createEmbedder factory", () => {
     it("returns OllamaEmbedder for provider=ollama", () => {
       const embedder = createEmbedder({

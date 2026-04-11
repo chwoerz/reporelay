@@ -12,7 +12,6 @@ import { eq } from "drizzle-orm";
 import { repoRefs } from "../storage/index.js";
 import type { Db } from "../storage/index.js";
 
-// ── Pure resolver ──
 
 /**
  * Pick the highest semver-satisfying tag from `candidates`.
@@ -35,7 +34,6 @@ export function resolveSemver(constraint: string, candidates: string[]): string 
   return valid[0] ?? null;
 }
 
-// ── DB wrapper ──
 
 export interface ResolvedRef {
   id: number;

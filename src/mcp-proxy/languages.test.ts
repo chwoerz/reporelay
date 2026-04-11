@@ -13,7 +13,6 @@ import { Languages, detectLanguagesFromDir } from "./languages.js";
 import { Languages as CanonicalLanguages } from "../core/types.js";
 import { detectLanguagesFromDir as canonicalDetect } from "../git/language-detector.js";
 
-// ── Sync-check tests ──
 
 describe("Languages (sync with canonical)", () => {
   it("matches the canonical Languages array from core/types", () => {
@@ -70,7 +69,6 @@ describe("detectLanguagesFromDir (sync with canonical)", () => {
   });
 });
 
-// ── Standalone behaviour tests ──
 
 describe("detectLanguagesFromDir (standalone)", () => {
   let tempDir: string;

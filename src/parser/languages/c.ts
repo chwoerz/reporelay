@@ -14,7 +14,6 @@ import type {
 } from "./base.js";
 import { sym, child, children, getBlockDoc } from "./base.js";
 
-// ── C-family helpers (shared with C++) ────────────────────
 
 /** Walk through nested declarators to find a function name. */
 export function findCFunctionName(node: SyntaxNode): string | null {
@@ -60,7 +59,6 @@ export function extractInclude(node: SyntaxNode, imports: ParsedImport[]): void 
   }
 }
 
-// ── C extractor ───────────────────────────────────────────
 
 export class CExtractor implements LanguageExtractor {
   extract(root: SyntaxNode): ParseResult {

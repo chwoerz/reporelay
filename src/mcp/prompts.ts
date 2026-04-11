@@ -10,7 +10,6 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { McpDeps } from "./server.js";
 import { findRepo, buildContext } from "../services/index.js";
 
-// ── Types ──
 
 /** Descriptor for a context-backed prompt. */
 interface PromptDef {
@@ -23,7 +22,6 @@ interface PromptDef {
   buildMessage: (args: { repoName: string; query?: string; context: string }) => string;
 }
 
-// ── Prompt definitions ──
 
 const PROMPT_DEFS: PromptDef[] = [
   {
@@ -67,7 +65,6 @@ const PROMPT_DEFS: PromptDef[] = [
   },
 ];
 
-// ── Helpers ──
 
 function notFoundPrompt(repoName: string) {
   return {
@@ -86,7 +83,6 @@ function userMessage(text: string) {
   };
 }
 
-// ── Registration ──
 
 export function registerPrompts(server: McpServer, deps: McpDeps): void {
   for (const def of PROMPT_DEFS) {

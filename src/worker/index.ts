@@ -15,7 +15,6 @@ import type { Logger } from "../core/logger.js";
 import { createQueue, registerIndexHandler, stopQueue } from "../storage/index.js";
 import { handleIndexJob, type WorkerDeps } from "./handler.js";
 
-// ── Stale worktree cleanup ──
 
 /**
  * Remove leftover worktree directories (`wt-*`) from a previous crash.
@@ -36,7 +35,6 @@ export async function cleanupStaleWorktrees(worktreesDir: string, logger: Logger
   }
 }
 
-// ── Main ──
 
 async function main(): Promise<void> {
   const { config, logger, sql, db, embedder } = await bootstrap({ migrate: true });

@@ -51,7 +51,6 @@ test.describe("Repo list page", () => {
     await expect(page).toHaveScreenshot("repo-list-empty.png");
   });
 
-  // ── Add repo form ──
 
   test("add button is disabled when form is empty", async ({ page }) => {
     await page.goto("/");
@@ -123,7 +122,6 @@ test.describe("Repo list page", () => {
     await expect(page).toHaveScreenshot("repo-list-token-missing.png");
   });
 
-  // ── Delete repo ──
 
   test("can delete a repo", async ({ page }) => {
     let deleteCalled = false;
@@ -142,7 +140,6 @@ test.describe("Repo list page", () => {
     expect(deleteCalled).toBe(true);
   });
 
-  // ── Error handling ──
 
   test("shows error when add repo fails", async ({ page }) => {
     await page.route("**/api/repos", async (route) => {

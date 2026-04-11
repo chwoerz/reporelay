@@ -20,7 +20,6 @@ import { loadProxyConfig, parseLanguageFilter } from "./config.js";
 import { detectLanguagesFromDir } from "./languages.js";
 import { startProxy } from "./proxy-server.js";
 
-// ── CLI argument parsing ──
 
 const { values } = parseArgs({
   options: {
@@ -30,7 +29,6 @@ const { values } = parseArgs({
   allowPositionals: true,
 });
 
-// ── Main ──
 
 async function main(): Promise<void> {
   const config = loadProxyConfig(process.env, values.server as string | undefined);

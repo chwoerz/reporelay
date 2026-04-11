@@ -10,7 +10,6 @@
  */
 import type { ParsedImport, ParsedSymbol } from "../core/types.js";
 
-// ── Types ──
 
 export interface ChunkerOptions {
   /** Max tokens per chunk (estimated via text.length / 4). Default: 512 */
@@ -29,7 +28,6 @@ export interface ChunkOutput {
   symbolSignature?: string;
 }
 
-// ── Helpers ──
 
 /**
  * Estimate token count via character heuristic.
@@ -117,7 +115,6 @@ function splitIntoWindows(
   return windows;
 }
 
-// ── Main Chunker ──
 
 function oneChunkFile(config: {
   contentBudget: number;

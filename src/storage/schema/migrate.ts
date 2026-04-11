@@ -29,17 +29,14 @@ const MIGRATIONS_FOLDER = "drizzle";
  * @param sql - A postgres.js `Sql` instance.
  */
 export async function runMigrations(sql: Sql): Promise<void> {
-  // ── 1. Extensions (must exist before tables that reference their types) ──
-  await sql`CREATE EXTENSION IF NOT EXISTS vector`;
+    await sql`CREATE EXTENSION IF NOT EXISTS vector`;
   await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
   await sql`CREATE EXTENSION IF NOT EXISTS pg_search`;
 
-  // ── 2. Drizzle file-based migrations ──
-  const db = drizzle(sql);
+    const db = drizzle(sql);
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
 
-  // ── 3. ParadeDB BM25 index (uses pdb.source_code tokenizer — not
-  //    expressible in the Drizzle schema, so managed here) ──
+    //    expressible in the Drizzle schema, so managed here) ──
   await sql`
     CREATE INDEX IF NOT EXISTS idx_chunks_bm25 ON chunks
     USING bm25 (id, (content::pdb.source_code))

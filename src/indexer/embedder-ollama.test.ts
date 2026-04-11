@@ -31,8 +31,7 @@ describe("OllamaEmbedder (live)", () => {
     }
   });
 
-  // ── Basic single text embedding ──
-
+  
   it("embeds a single text and returns a vector of correct dimensions", async () => {
     if (!available) return;
 
@@ -51,8 +50,7 @@ describe("OllamaEmbedder (live)", () => {
     expect(results[0]!.every((v) => Number.isFinite(v))).toBe(true);
   });
 
-  // ── Multiple texts in a single call ──
-
+  
   it("embeds multiple texts in a single call", async () => {
     if (!available) return;
 
@@ -76,8 +74,7 @@ describe("OllamaEmbedder (live)", () => {
     });
   });
 
-  // ── Semantic similarity ──
-
+  
   it("produces more similar embeddings for semantically related texts", async () => {
     if (!available) return;
 
@@ -118,8 +115,7 @@ describe("OllamaEmbedder (live)", () => {
     expect(simRelated).toBeGreaterThan(0.5);
   });
 
-  // ── Batching with real embeddings ──
-
+  
   it("embedInBatches produces correct results with small batch size", async () => {
     if (!available) return;
 
@@ -147,8 +143,7 @@ describe("OllamaEmbedder (live)", () => {
     });
   });
 
-  // ── Factory function ──
-
+  
   it("createEmbedder returns a working OllamaEmbedder", async () => {
     if (!available) return;
 
@@ -166,8 +161,7 @@ describe("OllamaEmbedder (live)", () => {
     expect(results[0]!.some((v) => v !== 0)).toBe(true);
   });
 
-  // ── Error handling ──
-
+  
   it("throws on empty input", async () => {
     if (!available) return;
 
@@ -184,8 +178,7 @@ describe("OllamaEmbedder (live)", () => {
     await expect(embedder.embed(["hello"])).rejects.toThrow();
   });
 
-  // ── Code-specific embeddings ──
-
+  
   it("embeds real code snippets and produces distinct vectors", async () => {
     if (!available) return;
 
@@ -234,8 +227,7 @@ func NewServer(addr string) *Server {
     });
   });
 
-  // ── init() dimension validation ──
-
+  
   it("init() succeeds when model dimensions match DB schema", async () => {
     if (!available) return;
 

@@ -24,7 +24,6 @@ import {
 import { Router } from "@angular/router";
 import type { Repo } from "../types";
 
-// ── Command item types ──
 
 interface CommandItem {
   id: string;

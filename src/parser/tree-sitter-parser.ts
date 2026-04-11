@@ -27,7 +27,6 @@ import {
   CppExtractor,
 } from "./languages/index.js";
 
-// ── Grammar registry ──────────────────────────────────────
 
 const GRAMMARS: Record<string, unknown> = {
   typescript: _tsGrammars.typescript,
@@ -41,7 +40,6 @@ const GRAMMARS: Record<string, unknown> = {
   cpp: _cppGrammar,
 };
 
-// ── Parser cache ──────────────────────────────────────────
 
 const parserCache = new Map<string, Parser>();
 
@@ -56,7 +54,6 @@ function getParser(lang: string): Parser {
   return p;
 }
 
-// ── Extractor registry ────────────────────────────────────
 
 const tsjs = new TypeScriptJavaScriptExtractor();
 
@@ -72,7 +69,6 @@ const EXTRACTORS: Partial<Record<Language, LanguageExtractor>> = {
   cpp: new CppExtractor(),
 };
 
-// ── Public API ────────────────────────────────────────────
 
 /**
  * Parse source code with tree-sitter and extract symbols + imports.

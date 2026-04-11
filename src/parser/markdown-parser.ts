@@ -8,7 +8,6 @@ import { visit } from "unist-util-visit";
 import type { Heading, Code, Link } from "mdast";
 import type { ParseResult, ParsedSymbol, ParsedImport } from "../core/types.js";
 
-// ── Internal types ──────────────────────────────────────────
 
 interface CodeBlock {
   language: string | null;
@@ -21,7 +20,6 @@ interface MarkdownParseResult extends ParseResult {
   codeBlocks: CodeBlock[];
 }
 
-// ── Main parse function ───────────────────────────────────
 
 /**
  * Parse a markdown document and extract headings, links, and code blocks.

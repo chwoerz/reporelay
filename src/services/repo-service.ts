@@ -23,7 +23,6 @@ import { readFileFromMirror } from "../git/git-sync.js";
 
 import type { LanguageStats } from "../core/types.js";
 
-// ── Shared types ──
 
 export interface ResolvedRepoRef {
   repo: {
@@ -68,7 +67,6 @@ export interface ImportRef {
   isDefault: boolean;
 }
 
-// ── Repo listing ──
 
 export interface RepoWithRefs {
   repo: Awaited<ReturnType<RepoRepository["listAll"]>>[number];
@@ -150,7 +148,6 @@ export async function listFilePaths(
   return rfRepo.listPaths(refId, prefix, languages);
 }
 
-// ── Core operations ──
 
 /**
  * Resolve a repo name → DB row, returning null when not found.

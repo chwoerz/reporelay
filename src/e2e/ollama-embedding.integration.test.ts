@@ -39,12 +39,10 @@ import { listFiles } from "../git/git-sync.js";
 import { searchHybrid } from "../retrieval/index.js";
 import { buildContextPack } from "../retrieval/index.js";
 
-// ── Constants ──
 
 const OLLAMA_URL = "http://localhost:11434";
 const EMBEDDING_MODEL = "nomic-embed-text";
 
-// ── Helpers ──
 
 async function isOllamaAvailable(): Promise<boolean> {
   try {
@@ -69,7 +67,6 @@ function cosine(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// ── Suite ──
 
 describe("E2E: Repository indexing with Ollama embeddings (integration)", () => {
   let ollamaAvailable: boolean;
@@ -133,10 +130,8 @@ describe("E2E: Repository indexing with Ollama embeddings (integration)", () => 
     await stopPostgres();
   });
 
-  // ──────────────────────────────────────────────────────
-  //  1. Storage integrity — files, symbols, chunks, embeddings
-  // ──────────────────────────────────────────────────────
-
+    //  1. Storage integrity — files, symbols, chunks, embeddings
+  
   describe("storage: all indexed data persisted correctly", () => {
     it("indexes all supported language files into ref_files", async () => {
       if (!ollamaAvailable) return;
@@ -213,10 +208,8 @@ describe("E2E: Repository indexing with Ollama embeddings (integration)", () => 
     });
   });
 
-  // ──────────────────────────────────────────────────────
-  //  2. Semantic search — real vector search works
-  // ──────────────────────────────────────────────────────
-
+    //  2. Semantic search — real vector search works
+  
   describe("semantic search: real embeddings produce meaningful results", () => {
     it("hybrid search for 'service lifecycle start stop' returns TypeScript service file", async () => {
       if (!ollamaAvailable) return;
@@ -311,10 +304,8 @@ describe("E2E: Repository indexing with Ollama embeddings (integration)", () => 
     });
   });
 
-  // ──────────────────────────────────────────────────────
-  //  3. Vector quality — embeddings are semantically coherent
-  // ──────────────────────────────────────────────────────
-
+    //  3. Vector quality — embeddings are semantically coherent
+  
   describe("vector quality: stored embeddings are semantically coherent", () => {
     it("chunks from the same file have higher mutual similarity than cross-file chunks", async () => {
       if (!ollamaAvailable) return;
@@ -385,10 +376,8 @@ describe("E2E: Repository indexing with Ollama embeddings (integration)", () => 
     });
   });
 
-  // ──────────────────────────────────────────────────────
-  //  4. Incremental re-index with real embeddings
-  // ──────────────────────────────────────────────────────
-
+    //  4. Incremental re-index with real embeddings
+  
   describe("re-index: new/changed files get fresh embeddings", () => {
     let refRow2: { id: number };
     let newCommitSha: string;
@@ -526,10 +515,8 @@ export class AuthService {
     });
   });
 
-  // ──────────────────────────────────────────────────────
-  //  5. Context builder with real embeddings
-  // ──────────────────────────────────────────────────────
-
+    //  5. Context builder with real embeddings
+  
   describe("context builder: assembles context packs with real embeddings", () => {
     it("builds an 'explain' context pack with semantically relevant chunks", async () => {
       if (!ollamaAvailable) return;
@@ -554,10 +541,8 @@ export class AuthService {
     });
   });
 
-  // ──────────────────────────────────────────────────────
-  //  6. BM25 + Vector fusion — both contribute to results
-  // ──────────────────────────────────────────────────────
-
+    //  6. BM25 + Vector fusion — both contribute to results
+  
   describe("RRF fusion: BM25 and vector scores both contribute", () => {
     it("FTS-heavy query (exact symbol name) returns relevant results", async () => {
       if (!ollamaAvailable) return;

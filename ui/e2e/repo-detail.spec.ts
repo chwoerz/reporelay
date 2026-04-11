@@ -44,7 +44,6 @@ test.describe("Repo detail page", () => {
     await expect(page).toHaveURL("/acme-api/context");
   });
 
-  // ── Sync form ──
 
   test("has a sync form with ref input and submit button", async ({ page }) => {
     await page.goto("/acme-api");
@@ -53,7 +52,6 @@ test.describe("Repo detail page", () => {
     await expect(syncBtn).toBeDisabled();
   });
 
-  // ── Glob settings ──
 
   test("shows glob settings section with save button", async ({ page }) => {
     await page.goto("/acme-api");
@@ -111,7 +109,6 @@ test.describe("Repo detail page", () => {
     await expect(page).toHaveScreenshot("repo-detail-sync-error.png");
   });
 
-  // ── Refresh tags ──
 
   test("has a refresh tags button", async ({ page }) => {
     await page.goto("/acme-api");
@@ -145,7 +142,6 @@ test.describe("Repo detail page", () => {
     });
   });
 
-  // ── Indexed refs table ──
 
   test("displays indexed refs in a table", async ({ page }) => {
     await page.goto("/acme-api");
@@ -184,7 +180,6 @@ test.describe("Repo detail page", () => {
     expect(deleteCalled).toBe(true);
   });
 
-  // ── Empty state ──
 
   test("shows empty state when no refs are indexed", async ({ page }) => {
     await page.route("**/api/repos/acme-api", async (route) => {
@@ -201,7 +196,6 @@ test.describe("Repo detail page", () => {
     await expect(page).toHaveScreenshot("repo-detail-empty-refs.png");
   });
 
-  // ── 404 ──
 
   test("shows indexing error when ref stage is error", async ({ page }) => {
     await page.route("**/api/repos/acme-api", async (route) => {

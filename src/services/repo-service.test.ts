@@ -7,7 +7,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── Mocks ──
 
 const mockFindByName = vi.fn();
 const mockSearchHybrid = vi.fn().mockResolvedValue([]);
@@ -37,7 +36,6 @@ import { searchCode } from "./repo-service.js";
 import type { Db } from "../storage/index.js";
 import type { Embedder } from "../indexer/embedder.js";
 
-// ── Helpers ──
 
 const fakeDb = {} as Db;
 const fakeEmbedder = {} as Embedder;

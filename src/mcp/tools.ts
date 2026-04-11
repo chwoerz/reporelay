@@ -22,7 +22,6 @@ import {
   searchCode,
 } from "../services/index.js";
 
-// ── Types ──
 
 interface ToolResult {
   [x: string]: unknown;
@@ -31,7 +30,6 @@ interface ToolResult {
   isError?: boolean;
 }
 
-// ── Helpers ──
 
 function textResult(text: string): ToolResult {
   return {content: [{type: "text", text}]};
@@ -75,11 +73,9 @@ const languagesParam = z
   );
 
 
-// ── Registration ──
 
 export function registerTools(server: McpServer, deps: McpDeps): void {
-  // ── search_code ──
-  server.registerTool(
+    server.registerTool(
     "search_code",
     {
       title: "Search Code",
@@ -111,8 +107,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── get_file ──
-  server.registerTool(
+    server.registerTool(
     "get_file",
     {
       title: "Get File",
@@ -154,8 +149,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── get_symbol ──
-  server.registerTool(
+    server.registerTool(
     "get_symbol",
     {
       title: "Get Symbol",
@@ -201,8 +195,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── find ──
-  server.registerTool(
+    server.registerTool(
     "find",
     {
       title: "Find",
@@ -241,8 +234,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── find_references ──
-  server.registerTool(
+    server.registerTool(
     "find_references",
     {
       title: "Find References",
@@ -270,8 +262,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── build_context_pack ──
-  server.registerTool(
+    server.registerTool(
     "build_context_pack",
     {
       title: "Build Context Pack",
@@ -308,8 +299,7 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
     },
   );
 
-  // ── list_repos ──
-  server.registerTool(
+    server.registerTool(
     "list_repos",
     {
       title: "List Repos",

@@ -11,7 +11,6 @@
 import { z } from "zod/v4";
 import { Languages } from "./languages.js";
 
-// ── Schema ──
 
 export const proxyConfigSchema = z.object({
   /** URL of the remote RepoRelay MCP endpoint (e.g. http://localhost:3000/mcp). */
@@ -34,7 +33,6 @@ export const proxyConfigSchema = z.object({
 
 export type ProxyConfig = z.infer<typeof proxyConfigSchema>;
 
-// ── Loader ──
 
 /**
  * Parse proxy configuration from environment + optional CLI overrides.
@@ -51,7 +49,6 @@ export function loadProxyConfig(
   return config;
 }
 
-// ── Language parsing (reuse from core) ──
 
 /**
  * Parse a comma-separated language string into a validated array.

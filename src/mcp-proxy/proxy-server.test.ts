@@ -12,7 +12,6 @@ import { z } from "zod/v4";
 import { enrichToolArgs, LANGUAGE_AWARE_TOOLS, startProxy } from "./proxy-server.js";
 import pino from "pino";
 
-// ── enrichToolArgs tests ──
 
 describe("enrichToolArgs", () => {
   it("injects languages for a language-aware tool when none provided", () => {
@@ -56,7 +55,6 @@ describe("enrichToolArgs", () => {
   });
 });
 
-// ── Full proxy wiring test ──
 
 describe("proxy wiring (in-memory)", () => {
   let testClient: Client;
@@ -67,8 +65,7 @@ describe("proxy wiring (in-memory)", () => {
   const logger = pino({ level: "silent" });
 
   beforeAll(async () => {
-    // ── Mock upstream server ──
-    // A minimal McpServer that records the arguments it receives.
+        // A minimal McpServer that records the arguments it receives.
     mockUpstream = new McpServer(
       { name: "mock-upstream", version: "1.0.0" },
       { capabilities: { logging: {} } },
@@ -106,12 +103,10 @@ describe("proxy wiring (in-memory)", () => {
       },
     );
 
-    // ── Wire: mock upstream ↔ proxy client (in-memory) ──
-    const [proxyClientTransport, upstreamServerTransport] = InMemoryTransport.createLinkedPair();
+        const [proxyClientTransport, upstreamServerTransport] = InMemoryTransport.createLinkedPair();
     await mockUpstream.connect(upstreamServerTransport);
 
-    // ── Wire: test client ↔ proxy server (in-memory) ──
-    const [testClientTransport, proxyServerTransport] = InMemoryTransport.createLinkedPair();
+        const [testClientTransport, proxyServerTransport] = InMemoryTransport.createLinkedPair();
 
     await startProxy(
       {
@@ -123,8 +118,7 @@ describe("proxy wiring (in-memory)", () => {
       proxyServerTransport,
     );
 
-    // ── Test client ──
-    testClient = new Client({ name: "test-client", version: "1.0.0" });
+        testClient = new Client({ name: "test-client", version: "1.0.0" });
     await testClient.connect(testClientTransport);
   });
 

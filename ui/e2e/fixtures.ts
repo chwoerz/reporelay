@@ -7,7 +7,6 @@
  */
 import { test as base, expect, type Page } from "@playwright/test";
 
-// ── Fixture data ──────────────────────────────────────────────────────
 
 export const REPOS = [
   {
@@ -149,7 +148,6 @@ export const INDEXING_STATUS: unknown[] = [];
 
 export const GIT_CREDENTIAL_HOSTS = ["GITHUB_COM"];
 
-// ── Route mocking helper ──────────────────────────────────────────────
 
 /**
  * Intercept all /api/* requests on the given page and respond with
@@ -274,7 +272,6 @@ export async function mockApi(page: Page) {
   });
 }
 
-// ── Custom test fixture ───────────────────────────────────────────────
 
 /**
  * Extended Playwright `test` that automatically applies `mockApi()` before
@@ -289,7 +286,6 @@ export const test = base.extend({
 
 export { expect };
 
-// ── Reusable page helpers ─────────────────────────────────────────────
 
 /** Shared locators used across multiple test files. */
 export const loc = {
