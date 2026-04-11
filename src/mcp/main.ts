@@ -5,13 +5,13 @@
  * as a stateless HTTP service.  Clients connect via the local
  * MCP proxy (`src/mcp-proxy/`), never directly.
  */
-import { bootstrap, setupGracefulShutdown } from "../core/index.js";
-import { parseLanguageFilter } from "../core/config.js";
-import { detectLanguagesFromDir } from "../git/language-detector.js";
-import { startMcpServer } from "./server.js";
+import {bootstrap, setupGracefulShutdown} from "../core/index.js";
+import {parseLanguageFilter} from "../core/config.js";
+import {detectLanguagesFromDir} from "../git/language-detector.js";
+import {startMcpServer} from "./server.js";
 
 async function main(): Promise<void> {
-  const { config, logger, sql, db, embedder } = await bootstrap();
+  const {config, logger, sql, db, embedder} = await bootstrap();
 
   logger.info("Starting MCP server (HTTP)…");
 
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
     // but skip auto-detection since repo filtering is off.
   } else if (languages) {
     logger.info(
-      { languages, threshold: languageThreshold },
+      {languages, threshold: languageThreshold},
       "Language filter active (MCP_LANGUAGES) — only these languages will be served",
     );
   } else {
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     if (detected.length > 0) {
       languages = detected;
       logger.info(
-        { languages, threshold: languageThreshold, cwd: process.cwd() },
+        {languages, threshold: languageThreshold, cwd: process.cwd()},
         "Auto-detected languages from working directory — filtering repos accordingly",
       );
     } else {
@@ -43,9 +43,9 @@ async function main(): Promise<void> {
   }
 
   // Start MCP HTTP server
-  const httpServer = await startMcpServer({ db, embedder, config, languages, languageThreshold });
+  const httpServer = await startMcpServer({db, embedder, config, languages, languageThreshold});
 
-  logger.info({ port: config.MCP_SERVER_PORT }, "MCP server listening (HTTP)");
+  logger.info({port: config.MCP_SERVER_PORT}, "MCP server listening (HTTP)");
 
   setupGracefulShutdown(logger, "MCP server", [
     async () => {

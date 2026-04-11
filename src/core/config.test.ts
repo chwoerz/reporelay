@@ -58,6 +58,11 @@ describe("Config", () => {
     expect(config.EMBEDDING_URL).toBeUndefined();
   });
 
+  it("EMBEDDING_URL treats empty string as undefined (Docker Compose compat)", () => {
+    const config = loadConfig({ EMBEDDING_URL: "" });
+    expect(config.EMBEDDING_URL).toBeUndefined();
+  });
+
   it("EMBEDDING_URL accepts a custom URL", () => {
     const config = loadConfig({ EMBEDDING_URL: "https://my-proxy.example.com/v1" });
     expect(config.EMBEDDING_URL).toBe("https://my-proxy.example.com/v1");
@@ -65,6 +70,11 @@ describe("Config", () => {
 
   it("EMBEDDING_DIMENSIONS defaults to undefined when not set", () => {
     const config = loadConfig({});
+    expect(config.EMBEDDING_DIMENSIONS).toBeUndefined();
+  });
+
+  it("EMBEDDING_DIMENSIONS treats empty string as undefined (Docker Compose compat)", () => {
+    const config = loadConfig({ EMBEDDING_DIMENSIONS: "" });
     expect(config.EMBEDDING_DIMENSIONS).toBeUndefined();
   });
 

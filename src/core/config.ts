@@ -10,6 +10,29 @@ import { Languages } from "./types.js";
 export const EmbeddingProviders = ["ollama", "openai"] as const;
 export type EmbeddingProvider = (typeof EmbeddingProviders)[number];
 
+/**
+ * Treat empty strings as undefined.
+ *
+ * Docker Compose passes `VAR=` (empty string) for `${VAR:-}` when the
+ * variable is not set in `.env`.  Zod's `.optional()` only treats
+ * `undefined` as "not present", so an empty string would fail URL or
+ * number validation.  This transform normalises the empty case.
+ */
+const emptyToUndefined = (val: unknown) =>
+  typeof val === "string" && val.trim() === "" ? undefined : val;
+
+/** Optional URL that accepts empty strings from Docker Compose. */
+const optionalUrl = z.preprocess(emptyToUndefined, z.url().optional());
+
+/** Optional positive integer that accepts empty strings from Docker Compose. */
+const optionalPositiveInt = z.preprocess(
+  emptyToUndefined,
+  z.coerce.number().int().positive().optional(),
+);
+
+/** Optional string that accepts empty strings from Docker Compose. */
+const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
+
 export const configSchema = z
   .object({
     // Database
@@ -26,7 +49,7 @@ export const configSchema = z
      * Set this explicitly when using a custom OpenAI-compatible provider
      * (Azure, Together, Mistral, etc.).
      */
-    EMBEDDING_URL: z.url().optional(),
+    EMBEDDING_URL: optionalUrl,
     EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
     EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
     /**
@@ -36,11 +59,11 @@ export const configSchema = z
      * init() will report a mismatch.
      * When unset, the model's native dimension is used.
      */
-    EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().optional(),
+    EMBEDDING_DIMENSIONS: optionalPositiveInt,
 
     // OpenAI-compatible embedding provider
     /** API key for OpenAI-compatible embedding providers. Required when EMBEDDING_PROVIDER=openai. */
-    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: optionalString,
 
     // CORS
     /**
@@ -49,7 +72,7 @@ export const configSchema = z
      * Use "*" to allow all origins (development only — NOT recommended for production).
      * Example: "http://localhost:4200,https://my-app.example.com"
      */
-    CORS_ORIGIN: z.string().optional(),
+    CORS_ORIGIN: optionalString,
 
     // MCP
     MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
@@ -61,7 +84,7 @@ export const configSchema = z
      * If auto-detection finds nothing, all languages are included.
      * Example: "java,kotlin" or "typescript,javascript"
      */
-    MCP_LANGUAGES: z.string().optional(),
+    MCP_LANGUAGES: optionalString,
     /**
      * Minimum language_stats percentage (0–100) for a repo ref to be
      * considered a match when filtering by language.

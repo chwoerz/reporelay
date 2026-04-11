@@ -1,16 +1,13 @@
-# ── Shared environment variables (used by worker, web, and mcp) ──
+# ── Shared environment OVERRIDES for Docker (take precedence over env_file) ──
 # NOTE: DATABASE_URL is hardcoded here because Docker containers must reach
 # Postgres via the compose service name ("postgres"), not "localhost" which
 # the .env file uses for local `pnpm dev`.
+# GIT_MIRRORS_DIR and GIT_WORKTREES_DIR use container-internal paths backed
+# by the shared `gitdata` Docker volume.
 x-shared-env: &shared-env
   DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-ollama}
-  EMBEDDING_URL: ${EMBEDDING_URL:-}
-  EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
-  EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
-  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  EMBEDDING_URL: http://host.docker.internal:11434
   GIT_MIRRORS_DIR: /data/mirrors
-  LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
   # ── ParadeDB (Postgres + pgvector + pg_trgm + pg_search) ──
@@ -37,9 +34,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file: .env
     environment:
       <<: *shared-env
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
       GIT_WORKTREES_DIR: /data/worktrees
     volumes:
       - gitdata:/data
@@ -55,9 +52,9 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
+    env_file: .env
     environment:
       <<: *shared-env
-      WEB_PORT: 3001
     volumes:
       - gitdata:/data
 
@@ -72,9 +69,9 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
+    env_file: .env
     environment:
       <<: *shared-env
-      MCP_SERVER_PORT: 3000
     volumes:
       - gitdata:/data:ro
 
