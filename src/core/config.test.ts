@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { loadConfig, parseLanguageFilter } from "./config.js";
-import { redactConfig } from "./bootstrap.js";
+import {describe, expect, it} from "vitest";
+import {loadConfig} from "./config.js";
+import {redactConfig} from "./bootstrap.js";
 
 describe("Config", () => {
   it("loads defaults when no .env is present", () => {
@@ -28,14 +28,14 @@ describe("Config", () => {
   });
 
   it("validates required fields and throws on invalid config", () => {
-    expect(() => loadConfig({ MCP_SERVER_PORT: "-1" })).toThrow();
+    expect(() => loadConfig({MCP_SERVER_PORT: "-1"})).toThrow();
 
-    expect(() => loadConfig({ LOG_LEVEL: "banana" })).toThrow();
+    expect(() => loadConfig({LOG_LEVEL: "banana"})).toThrow();
   });
 
   it("defaults MCP_SERVER_PORT to 3000", () => {
     expect(loadConfig({}).MCP_SERVER_PORT).toBe(3000);
-    expect(loadConfig({ MCP_SERVER_PORT: "4000" }).MCP_SERVER_PORT).toBe(4000);
+    expect(loadConfig({MCP_SERVER_PORT: "4000"}).MCP_SERVER_PORT).toBe(4000);
   });
 
   it("CORS_ORIGIN defaults to undefined", () => {
@@ -44,12 +44,12 @@ describe("Config", () => {
   });
 
   it("CORS_ORIGIN stores raw comma-separated string", () => {
-    const config = loadConfig({ CORS_ORIGIN: "http://localhost:4200,https://app.example.com" });
+    const config = loadConfig({CORS_ORIGIN: "http://localhost:4200,https://app.example.com"});
     expect(config.CORS_ORIGIN).toBe("http://localhost:4200,https://app.example.com");
   });
 
   it("CORS_ORIGIN accepts wildcard", () => {
-    const config = loadConfig({ CORS_ORIGIN: "*" });
+    const config = loadConfig({CORS_ORIGIN: "*"});
     expect(config.CORS_ORIGIN).toBe("*");
   });
 
@@ -59,12 +59,12 @@ describe("Config", () => {
   });
 
   it("EMBEDDING_URL treats empty string as undefined (Docker Compose compat)", () => {
-    const config = loadConfig({ EMBEDDING_URL: "" });
+    const config = loadConfig({EMBEDDING_URL: ""});
     expect(config.EMBEDDING_URL).toBeUndefined();
   });
 
   it("EMBEDDING_URL accepts a custom URL", () => {
-    const config = loadConfig({ EMBEDDING_URL: "https://my-proxy.example.com/v1" });
+    const config = loadConfig({EMBEDDING_URL: "https://my-proxy.example.com/v1"});
     expect(config.EMBEDDING_URL).toBe("https://my-proxy.example.com/v1");
   });
 
@@ -74,57 +74,16 @@ describe("Config", () => {
   });
 
   it("EMBEDDING_DIMENSIONS treats empty string as undefined (Docker Compose compat)", () => {
-    const config = loadConfig({ EMBEDDING_DIMENSIONS: "" });
+    const config = loadConfig({EMBEDDING_DIMENSIONS: ""});
     expect(config.EMBEDDING_DIMENSIONS).toBeUndefined();
   });
 
   it("EMBEDDING_DIMENSIONS parses a numeric string", () => {
-    const config = loadConfig({ EMBEDDING_DIMENSIONS: "768" });
+    const config = loadConfig({EMBEDDING_DIMENSIONS: "768"});
     expect(config.EMBEDDING_DIMENSIONS).toBe(768);
   });
-
-  it("MCP_LANGUAGES defaults to undefined", () => {
-    const config = loadConfig({});
-    expect(config.MCP_LANGUAGES).toBeUndefined();
-  });
-
-  it("MCP_LANGUAGES stores raw comma-separated string", () => {
-    const config = loadConfig({ MCP_LANGUAGES: "java,kotlin" });
-    expect(config.MCP_LANGUAGES).toBe("java,kotlin");
-  });
 });
-
-describe("parseLanguageFilter", () => {
-  it("returns undefined for empty/undefined input", () => {
-    expect(parseLanguageFilter()).toBeUndefined();
-    expect(parseLanguageFilter("")).toBeUndefined();
-    expect(parseLanguageFilter("  ")).toBeUndefined();
-  });
-
-  it("parses comma-separated languages", () => {
-    expect(parseLanguageFilter("java,kotlin")).toEqual(["java", "kotlin"]);
-  });
-
-  it("trims whitespace and lowercases", () => {
-    expect(parseLanguageFilter(" Java , Kotlin ")).toEqual(["java", "kotlin"]);
-  });
-
-  it("filters out unsupported languages", () => {
-    expect(parseLanguageFilter("java,ruby,kotlin")).toEqual(["java", "kotlin"]);
-  });
-
-  it("returns undefined when all languages are unsupported", () => {
-    expect(parseLanguageFilter("ruby,swift,csharp")).toBeUndefined();
-  });
-
-  it("accepts all supported languages", () => {
-    const all = "typescript,javascript,python,go,java,kotlin,rust,c,cpp,markdown";
-    const result = parseLanguageFilter(all);
-    expect(result).toHaveLength(10);
-    expect(result).toContain("typescript");
-    expect(result).toContain("markdown");
-  });
-});
+;
 
 describe("redactConfig", () => {
   it("masks DATABASE_URL showing only the last 4 characters", () => {
@@ -151,7 +110,7 @@ describe("redactConfig", () => {
   });
 
   it("does not mask non-secret values", () => {
-    const config = loadConfig({ LOG_LEVEL: "debug" });
+    const config = loadConfig({LOG_LEVEL: "debug"});
     const redacted = redactConfig(config);
     expect(redacted.LOG_LEVEL).toBe("debug");
     expect(redacted.EMBEDDING_PROVIDER).toBe("ollama");

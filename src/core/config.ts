@@ -2,13 +2,11 @@
  * Application configuration loaded from environment variables.
  * Validated via Zod schema on startup.
  */
-import { z } from "zod/v4";
-import { Languages } from "./types.js";
+import {z} from "zod/v4";
 
 // ── Schema ──
 
 export const EmbeddingProviders = ["ollama", "openai"] as const;
-export type EmbeddingProvider = (typeof EmbeddingProviders)[number];
 
 /**
  * Treat empty strings as undefined.
@@ -77,15 +75,6 @@ export const configSchema = z
     // MCP
     MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
     /**
-     * Comma-separated list of languages to include in MCP search results.
-     * When set, only files/chunks in these languages are returned.
-     * When empty/unset, languages are auto-detected from the current working
-     * directory's manifest files (e.g. package.json → typescript, Cargo.toml → rust).
-     * If auto-detection finds nothing, all languages are included.
-     * Example: "java,kotlin" or "typescript,javascript"
-     */
-    MCP_LANGUAGES: optionalString,
-    /**
      * Minimum language_stats percentage (0–100) for a repo ref to be
      * considered a match when filtering by language.
      * A ref is included if at least one of its detected languages meets this threshold.
@@ -111,20 +100,6 @@ export const configSchema = z
   });
 
 export type Config = z.infer<typeof configSchema>;
-
-/**
- * Parse the MCP_LANGUAGES config string into an array of validated language names.
- * Returns undefined when no valid languages are configured (meaning: all languages).
- */
-export function parseLanguageFilter(raw?: string): string[] | undefined {
-  if (!raw || !raw.trim()) return undefined;
-  const langs = raw
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  const valid = langs.filter((l) => (Languages as readonly string[]).includes(l));
-  return valid.length > 0 ? valid : undefined;
-}
 
 // ── Loader ──
 

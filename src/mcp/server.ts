@@ -24,8 +24,7 @@ export interface McpDeps {
   db: Db;
   embedder: Embedder;
   config: Config;
-  /** When set, only results in these languages are returned by MCP tools. */
-  languages?: string[];
+
   /**
    * Minimum language_stats percentage (0–100) for a repo ref to be included
    * when filtering by language. Defaults to 10 if not provided.
