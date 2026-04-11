@@ -271,8 +271,72 @@ main {
   padding: 2rem 2.5rem;
   transition: margin-left 200ms ease;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .sidebar-collapsed main {
   margin-left: 52px;
+}
+
+/* ── Health warning banner ── */
+.health-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 1.5rem;
+  border-radius: var(--cw-radius);
+  background: var(--cw-red-subtle-bg);
+  border: 1px solid var(--cw-red-subtle-border);
+  color: var(--cw-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.banner-icon {
+  color: var(--cw-red);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-text strong {
+  color: var(--cw-text-primary);
+}
+
+.banner-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--cw-text-muted);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.banner-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cw-text-dim);
+  padding: 4px;
+  border-radius: var(--cw-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.banner-dismiss:hover {
+  color: var(--cw-text-secondary);
+  background: var(--cw-bg-hover);
+}
+.banner-dismiss .mi {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }

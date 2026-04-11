@@ -90,6 +90,6 @@ export async function startMcpServer(deps: McpDeps): Promise<import("node:http")
     res.end("Not found");
   });
 
-  httpServer.listen(port);
+  httpServer.listen(port, "0.0.0.0");
   return httpServer;
 }

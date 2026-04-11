@@ -5,8 +5,8 @@
  * Centralises the repeated config → logger → postgres → db → embedder
  * sequence and the SIGTERM/SIGINT shutdown handler.
  *
- * Only the worker runs migrations — the web and MCP servers assume the
- * schema is already up-to-date.
+ * Only the worker runs migrations (Drizzle file-based from `drizzle/`) —
+ * the web and MCP servers assume the schema is already up-to-date.
  */
 import postgres, { type Sql } from "postgres";
 import { asyncExitHook, gracefulExit } from "exit-hook";
@@ -14,7 +14,32 @@ import { loadConfig, type Config } from "./config.js";
 import { createLogger, type Logger } from "./logger.js";
 import { createDb, type Db } from "../storage/index.js";
 import { runMigrations } from "../storage/index.js";
-import { createEmbedder, type Embedder } from "../indexer/embedder.js";
+import { createEmbedder, OPENAI_DEFAULT_BASE_URL, type Embedder, type EmbedderOptions } from "../indexer/embedder.js";
+
+// ── Provider-specific default URLs ──
+
+const OLLAMA_DEFAULT_URL = "http://localhost:11434";
+
+// ── Secret masking ──
+
+/** Keys whose values must be redacted in log output. */
+const SECRET_KEYS = ["DATABASE_URL", "OPENAI_API_KEY"];
+const SECRET_PATTERN = /^GIT_TOKEN_/;
+
+/**
+ * Return a shallow copy of the config with secrets replaced by a
+ * `"****<last4>"` placeholder (or `"(unset)"` when undefined).
+ */
+export function redactConfig(config: Config): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => {
+      if (SECRET_KEYS.includes(key) || SECRET_PATTERN.test(key)) {
+        return [key, typeof value === "string" && value.length > 4 ? `****${value.slice(-4)}` : "****"];
+      }
+      return [key, value];
+    }),
+  );
+}
 
 // ── Bootstrap options ──
 
@@ -46,6 +71,9 @@ export interface BootstrapResult {
 export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapResult> {
   const config = loadConfig();
   const logger = createLogger(config);
+
+  logger.info({ config: redactConfig(config) }, "Configuration loaded");
+
   const sql = postgres(config.DATABASE_URL);
 
   if (opts.migrate) {
@@ -53,12 +81,36 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapR
   }
 
   const db = createDb(sql);
-  const embedder = createEmbedder({
-    url: config.EMBEDDING_URL,
-    model: config.EMBEDDING_MODEL,
-  });
+
+  const embedderOptions: EmbedderOptions =
+    config.EMBEDDING_PROVIDER === "openai"
+      ? {
+          provider: "openai",
+          apiKey: config.OPENAI_API_KEY!,
+          model: config.EMBEDDING_MODEL,
+          baseUrl: config.EMBEDDING_URL ?? OPENAI_DEFAULT_BASE_URL,
+          dimensions: config.EMBEDDING_DIMENSIONS,
+        }
+      : {
+          provider: "ollama",
+          url: config.EMBEDDING_URL ?? OLLAMA_DEFAULT_URL,
+          model: config.EMBEDDING_MODEL,
+        };
+
+  const embedder = createEmbedder(embedderOptions);
 
   await embedder.init();
+
+  if (embedder.initError) {
+    logger.warn(
+      {
+        error: embedder.initError,
+        provider: config.EMBEDDING_PROVIDER,
+        model: config.EMBEDDING_MODEL,
+      },
+      "Embedder probe failed — search and embedding features will be unavailable until the embedding provider is reachable",
+    );
+  }
 
   return { config, logger, sql, db, embedder };
 }

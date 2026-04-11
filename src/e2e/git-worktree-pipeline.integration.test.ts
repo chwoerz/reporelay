@@ -100,6 +100,7 @@ describe("E2E: git sync → worktree checkout → pipeline → search (integrati
     it("handleIndexJob indexes v1.0.0 to ready", async () => {
       const config: Config = {
         DATABASE_URL: "",
+        EMBEDDING_PROVIDER: "ollama",
         EMBEDDING_URL: "http://localhost:11434",
         EMBEDDING_MODEL: "nomic-embed-text",
         EMBEDDING_BATCH_SIZE: 64,

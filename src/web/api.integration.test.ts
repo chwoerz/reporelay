@@ -28,6 +28,7 @@ let app: FastifyInstance;
 /** Minimal mock config for testing (no real git mirrors needed). */
 const mockConfig: Config = {
   DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+  EMBEDDING_PROVIDER: "ollama",
   EMBEDDING_URL: "http://localhost:11434",
   EMBEDDING_MODEL: "nomic-embed-text",
   EMBEDDING_BATCH_SIZE: 64,
@@ -77,10 +78,39 @@ describe("Web API (integration)", () => {
   });
 
   describe("GET /health", () => {
-    it("returns 200 with status ok", async () => {
+    it("returns 200 with status ok when embedder is healthy", async () => {
       const res = await app.inject({ method: "GET", url: "/health" });
       expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({ status: "ok" });
+      expect(res.json()).toEqual({
+        status: "ok",
+        embedder: { status: "ok" },
+      });
+    });
+
+    it("returns 200 with status degraded when embedder has an error", async () => {
+      const brokenEmbedder = createMockEmbedder();
+      brokenEmbedder.initError = "fetch failed: connection refused";
+
+      const degradedApp = buildApp({
+        db,
+        boss: mainBoss as any,
+        embedder: brokenEmbedder,
+        config: mockConfig,
+        logger: { info: vi.fn(), error: vi.fn() } as any,
+      });
+      await degradedApp.ready();
+
+      const res = await degradedApp.inject({ method: "GET", url: "/health" });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        status: "degraded",
+        embedder: {
+          status: "error",
+          error: "fetch failed: connection refused",
+        },
+      });
+
+      await degradedApp.close();
     });
   });
 

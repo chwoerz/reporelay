@@ -8,6 +8,10 @@
  * At startup the {@link Embedder.init} hook probes the model to
  * detect its native embedding dimension and validates it against the DB
  * schema's fixed column width ({@link DB_EMBEDDING_DIMENSIONS}).
+ *
+ * **Safety-net guarantee:** {@link embedInBatches} never throws.
+ * Texts that fail to embed produce a `null` entry with an
+ * accompanying {@link EmbeddingFailure} so callers can persist the error.
  */
 import { estimateTokens } from "./chunker.js";
 
@@ -23,6 +27,13 @@ export interface Embedder {
    * Called once from {@link bootstrap} before any real work begins.
    */
   init(): Promise<void>;
+
+  /**
+   * Non-null when the last {@link init} call failed.
+   * Consumers (health endpoint, UI) can inspect this to surface the
+   * error without crashing the server.
+   */
+  initError: string | null;
 }
 
 /**
@@ -32,6 +43,30 @@ export interface Embedder {
  * defined as `vector("embedding", { dimensions: 768 })` in schema.ts.
  */
 export const DB_EMBEDDING_DIMENSIONS = 768;
+
+// ── Failure tracking ──
+
+/**
+ * Records a single chunk that could not be embedded.
+ * Stored alongside the `null` embedding so callers can persist the error
+ * (e.g. in the `chunks.embedding_error` column).
+ */
+export interface EmbeddingFailure {
+  /** Index in the original `texts` array passed to {@link embedInBatches}. */
+  index: number;
+  /** Human-readable error description. */
+  error: string;
+}
+
+/**
+ * Result of a batch embedding run.
+ * `embeddings[i]` is `null` when the text at index `i` could not be
+ * embedded — the matching entry in `failures` explains why.
+ */
+export interface EmbedBatchResult {
+  embeddings: (number[] | null)[];
+  failures: EmbeddingFailure[];
+}
 
 // ── Ollama Provider ──
 
@@ -49,6 +84,7 @@ interface OllamaEmbedResponse {
 export class OllamaEmbedder implements Embedder {
   private readonly url: string;
   private readonly model: string;
+  initError: string | null = null;
 
   constructor(options: OllamaEmbedderOptions) {
     this.url = options.url;
@@ -59,20 +95,27 @@ export class OllamaEmbedder implements Embedder {
    * Probe the model by embedding a single token, then verify that the
    * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
    *
-   * Throws immediately if Ollama is unreachable or the model produces
-   * a different dimension — no point starting the worker/web server
-   * with an incompatible model.
+   * Captures the error in {@link initError} instead of throwing so the
+   * server can start even when Ollama is unreachable. Callers should
+   * check `initError` to decide whether embedding-dependent features
+   * are available.
    */
   async init(): Promise<void> {
-    const probe = await this.embed(["dim"]);
-    const detected = probe[0]!.length;
+    try {
+      const probe = await this.embed(["dim"]);
+      const detected = probe[0]!.length;
 
-    if (detected !== DB_EMBEDDING_DIMENSIONS) {
-      throw new Error(
-        `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
+      if (detected !== DB_EMBEDDING_DIMENSIONS) {
+        this.initError =
+          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
           `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
-          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model or run a migration.`,
-      );
+          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model or run a migration.`;
+        return;
+      }
+
+      this.initError = null;
+    } catch (err) {
+      this.initError = err instanceof Error ? err.message : String(err);
     }
   }
 
@@ -98,6 +141,118 @@ export class OllamaEmbedder implements Embedder {
 
     const data = (await response.json()) as OllamaEmbedResponse;
     return data.embeddings;
+  }
+}
+
+// ── OpenAI-compatible Provider ──
+
+export interface OpenaiEmbedderOptions {
+  /** API key for the OpenAI-compatible provider. */
+  apiKey: string;
+  /** Model name (e.g. "text-embedding-3-small"). */
+  model: string;
+  /** Base URL — defaults to {@link OPENAI_DEFAULT_BASE_URL}. */
+  baseUrl?: string;
+  /**
+   * Number of dimensions to request from the API.
+   * Only supported by text-embedding-3 and later models.
+   * Omitted from the request when undefined (uses the model's default).
+   */
+  dimensions?: number;
+}
+
+interface OpenaiEmbedResponseItem {
+  embedding: number[];
+  index: number;
+  object: string;
+}
+
+interface OpenaiEmbedResponse {
+  data: OpenaiEmbedResponseItem[];
+  model: string;
+  object: string;
+  usage: { prompt_tokens: number; total_tokens: number };
+}
+
+export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
+
+/**
+ * Embedder for OpenAI-compatible embedding APIs.
+ *
+ * Works with any provider that implements the POST /embeddings endpoint
+ * using the OpenAI request/response format (OpenAI, Azure OpenAI,
+ * Together AI, Mistral, etc.).
+ */
+export class OpenaiEmbedder implements Embedder {
+  private readonly apiKey: string;
+  private readonly model: string;
+  private readonly baseUrl: string;
+  private readonly dimensions: number | undefined;
+  initError: string | null = null;
+
+  constructor(options: OpenaiEmbedderOptions) {
+    this.apiKey = options.apiKey;
+    this.model = options.model;
+    this.baseUrl = (options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.dimensions = options.dimensions;
+  }
+
+  /**
+   * Probe the model by embedding a single token, then verify that the
+   * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
+   *
+   * Captures the error in {@link initError} instead of throwing so the
+   * server can start even when the API is unreachable.
+   */
+  async init(): Promise<void> {
+    try {
+      const probe = await this.embed(["dim"]);
+      const detected = probe[0]!.length;
+
+      if (detected !== DB_EMBEDDING_DIMENSIONS) {
+        this.initError =
+          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
+          `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
+          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model, set EMBEDDING_DIMENSIONS=${DB_EMBEDDING_DIMENSIONS}, or run a migration.`;
+        return;
+      }
+
+      this.initError = null;
+    } catch (err) {
+      this.initError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  async embed(texts: string[]): Promise<number[][]> {
+    if (texts.length === 0) throw new Error("embed() requires at least one text");
+
+    const body: Record<string, unknown> = {
+      model: this.model,
+      input: texts,
+      encoding_format: "float",
+    };
+    if (this.dimensions !== undefined) {
+      body.dimensions = this.dimensions;
+    }
+
+    const response = await fetch(`${this.baseUrl}/embeddings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`OpenAI embed failed (${response.status}): ${text}`);
+    }
+
+    const data = (await response.json()) as OpenaiEmbedResponse;
+
+    // Sort by index to guarantee order matches the input array
+    return data.data.sort((a, b) => a.index - b.index).map((item) => item.embedding);
   }
 }
 
@@ -150,34 +305,70 @@ export function truncateForEmbedding(text: string, maxTokens = MAX_EMBED_TOKENS)
  * Embed texts in batches, reassembling results in the original order.
  * Automatically truncates texts that exceed the model's context window.
  *
+ * **Safety-net guarantee:** this function **never throws**. Texts that
+ * cannot be embedded are recorded in the returned
+ * {@link EmbedBatchResult.failures} array with a `null` embedding,
+ * so callers can persist the error (e.g. in the DB).
+ *
+ * **Resilience strategy:**
+ * 1. Truncate all texts to the model's token budget.
+ * 2. Try the full batch — fastest path for well-sized texts.
+ * 3. If the batch fails, fall back to embedding each text individually.
+ * 4. If a single text still fails, record it as a failure with a `null`
+ *    embedding and continue with the remaining texts.
+ *
  * @param embedder - The embedder provider to use
  * @param texts - All texts to embed
  * @param batchSize - Max texts per batch (default: 64)
- * @returns Embeddings in the same order as `texts`
+ * @returns {@link EmbedBatchResult} — embeddings (or null) + failures
  */
 export async function embedInBatches(
   embedder: Embedder,
   texts: string[],
   batchSize = 64,
-): Promise<number[][]> {
-  if (texts.length === 0) return [];
+): Promise<EmbedBatchResult> {
+  if (texts.length === 0) return { embeddings: [], failures: [] };
 
   // Truncate any texts exceeding the model's context window
   const safeTexts = texts.map((t) => truncateForEmbedding(t));
 
-  const results: number[][] = [];
+  const embeddings: (number[] | null)[] = [];
+  const failures: EmbeddingFailure[] = [];
 
   for (let i = 0; i < safeTexts.length; i += batchSize) {
     const batch = safeTexts.slice(i, i + batchSize);
-    const embeddings = await embedder.embed(batch);
-    results.push(...embeddings);
+    try {
+      const batchEmbeddings = await embedder.embed(batch);
+      embeddings.push(...batchEmbeddings);
+    } catch {
+      // Batch failed — fall back to embedding each text individually in parallel.
+      const settled = await Promise.allSettled(batch.map((text) => embedder.embed([text])));
+      for (const [j, result] of settled.entries()) {
+        if (result.status === "fulfilled") {
+          embeddings.push(result.value[0]!);
+        } else {
+          const msg =
+            result.reason instanceof Error ? result.reason.message : String(result.reason);
+          embeddings.push(null);
+          failures.push({ index: i + j, error: msg });
+        }
+      }
+    }
   }
 
-  return results;
+  return { embeddings, failures };
 }
 
 // ── Factory ──
 
-export function createEmbedder(options: OllamaEmbedderOptions): Embedder {
+/** Discriminated union of options for all supported embedding providers. */
+export type EmbedderOptions =
+  | ({ provider: "ollama" } & OllamaEmbedderOptions)
+  | ({ provider: "openai" } & OpenaiEmbedderOptions);
+
+export function createEmbedder(options: EmbedderOptions): Embedder {
+  if (options.provider === "openai") {
+    return new OpenaiEmbedder(options);
+  }
   return new OllamaEmbedder(options);
 }

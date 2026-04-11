@@ -30,6 +30,9 @@ export class RefPickerComponent {
   dropdownOpen = signal(false);
   highlightIndex = signal(-1);
 
+  /** Tracks the last valid selection so we can revert on blur. */
+  private selectedRef = signal("");
+
   private wrapper = viewChild<ElementRef<HTMLElement>>("wrapper");
 
   filteredBranches = computed(() => {
@@ -62,21 +65,25 @@ export class RefPickerComponent {
     // Delay close so click on option can register
     setTimeout(() => {
       this.dropdownOpen.set(false);
-      const value = this.search();
-      if (value) {
-        this.refSelected.emit(value);
+      // Revert to last valid selection if typed text isn't a known ref
+      const typed = this.search();
+      const allRefs = [...this.gitRefs().branches, ...this.gitRefs().tags];
+      if (typed && !allRefs.includes(typed)) {
+        this.search.set(this.selectedRef());
       }
     }, 200);
   }
 
   selectOption(value: string) {
     this.search.set(value);
+    this.selectedRef.set(value);
     this.dropdownOpen.set(false);
     this.refSelected.emit(value);
   }
 
   clear() {
     this.search.set("");
+    this.selectedRef.set("");
     this.refSelected.emit("");
   }
 
@@ -98,9 +105,6 @@ export class RefPickerComponent {
         event.preventDefault();
         if (this.highlightIndex() >= 0 && this.highlightIndex() < count) {
           this.selectOption(items[this.highlightIndex()]!.value);
-        } else if (this.search()) {
-          this.dropdownOpen.set(false);
-          this.refSelected.emit(this.search());
         }
         break;
       case "Escape":

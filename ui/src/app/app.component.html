@@ -44,6 +44,18 @@
   </aside>
 
   <main>
+    @if (showBanner()) {
+      <div class="health-banner">
+        <span class="mi banner-icon">warning</span>
+        <span class="banner-text">
+          <strong>Ollama is not reachable</strong> — search and embedding features are unavailable.
+          <span class="banner-detail">{{ embedderError() }}</span>
+        </span>
+        <button class="banner-dismiss" (click)="dismissBanner()">
+          <span class="mi">close</span>
+        </button>
+      </div>
+    }
     <router-outlet />
   </main>
 </div>

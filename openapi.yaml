@@ -587,10 +587,23 @@ components:
 
     HealthResponse:
       type: object
-      required: [status]
+      required: [status, embedder]
       properties:
         status:
           type: string
+          description: Overall service status ("ok" or "degraded")
+          enum: [ok, degraded]
+        embedder:
+          type: object
+          required: [status]
+          description: Embedding provider (Ollama) connectivity status
+          properties:
+            status:
+              type: string
+              enum: [ok, error]
+            error:
+              type: string
+              description: Human-readable error when embedder is unreachable
 
     # ── Repos ──
     RepoRef:

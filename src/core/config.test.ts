@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadConfig, parseLanguageFilter } from "./config.js";
+import { redactConfig } from "./bootstrap.js";
 
 describe("Config", () => {
   it("loads defaults when no .env is present", () => {
@@ -52,6 +53,26 @@ describe("Config", () => {
     expect(config.CORS_ORIGIN).toBe("*");
   });
 
+  it("EMBEDDING_URL defaults to undefined when not set", () => {
+    const config = loadConfig({});
+    expect(config.EMBEDDING_URL).toBeUndefined();
+  });
+
+  it("EMBEDDING_URL accepts a custom URL", () => {
+    const config = loadConfig({ EMBEDDING_URL: "https://my-proxy.example.com/v1" });
+    expect(config.EMBEDDING_URL).toBe("https://my-proxy.example.com/v1");
+  });
+
+  it("EMBEDDING_DIMENSIONS defaults to undefined when not set", () => {
+    const config = loadConfig({});
+    expect(config.EMBEDDING_DIMENSIONS).toBeUndefined();
+  });
+
+  it("EMBEDDING_DIMENSIONS parses a numeric string", () => {
+    const config = loadConfig({ EMBEDDING_DIMENSIONS: "768" });
+    expect(config.EMBEDDING_DIMENSIONS).toBe(768);
+  });
+
   it("MCP_LANGUAGES defaults to undefined", () => {
     const config = loadConfig({});
     expect(config.MCP_LANGUAGES).toBeUndefined();
@@ -94,3 +115,45 @@ describe("parseLanguageFilter", () => {
     expect(result).toContain("markdown");
   });
 });
+
+describe("redactConfig", () => {
+  it("masks DATABASE_URL showing only the last 4 characters", () => {
+    const config = loadConfig({
+      DATABASE_URL: "postgresql://reporelay:secret@localhost:5432/reporelay",
+    });
+    const redacted = redactConfig(config);
+    expect(redacted.DATABASE_URL).toBe("****elay");
+  });
+
+  it("masks OPENAI_API_KEY showing only the last 4 characters", () => {
+    const config = loadConfig({
+      EMBEDDING_PROVIDER: "openai",
+      OPENAI_API_KEY: "sk-proj-abc123xyz",
+    });
+    const redacted = redactConfig(config);
+    expect(redacted.OPENAI_API_KEY).toBe("****3xyz");
+  });
+
+  it("omits optional secrets that are not set", () => {
+    const config = loadConfig({});
+    const redacted = redactConfig(config);
+    expect(redacted).not.toHaveProperty("OPENAI_API_KEY");
+  });
+
+  it("does not mask non-secret values", () => {
+    const config = loadConfig({ LOG_LEVEL: "debug" });
+    const redacted = redactConfig(config);
+    expect(redacted.LOG_LEVEL).toBe("debug");
+    expect(redacted.EMBEDDING_PROVIDER).toBe("ollama");
+    expect(redacted.EMBEDDING_MODEL).toBe("nomic-embed-text");
+  });
+
+  it("omits optional fields that are not set", () => {
+    const config = loadConfig({});
+    const redacted = redactConfig(config);
+    expect(redacted).not.toHaveProperty("EMBEDDING_URL");
+    expect(redacted).not.toHaveProperty("EMBEDDING_DIMENSIONS");
+    expect(redacted).not.toHaveProperty("CORS_ORIGIN");
+  });
+});
+

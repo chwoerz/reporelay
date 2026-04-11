@@ -4,9 +4,39 @@
 */
 
 
+export const healthResponseStatusEnum = {
+    ok: "ok",
+    degraded: "degraded"
+} as const;
+
+export type HealthResponseStatusEnumKey = (typeof healthResponseStatusEnum)[keyof typeof healthResponseStatusEnum];
+
+export const embedderStatusEnum = {
+    ok: "ok",
+    error: "error"
+} as const;
+
+export type EmbedderStatusEnumKey = (typeof embedderStatusEnum)[keyof typeof embedderStatusEnum];
+
 export type HealthResponse = {
     /**
+     * @description Overall service status (\"ok\" or \"degraded\")
      * @type string
     */
-    status: string;
+    status: HealthResponseStatusEnumKey;
+    /**
+     * @description Embedding provider (Ollama) connectivity status
+     * @type object
+    */
+    embedder: {
+        /**
+         * @type string
+        */
+        status: EmbedderStatusEnumKey;
+        /**
+         * @description Human-readable error when embedder is unreachable
+         * @type string | undefined
+        */
+        error?: string;
+    };
 };

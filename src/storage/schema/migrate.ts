@@ -1,48 +1,45 @@
 /**
- * Programmatic migration runner.
+ * Schema migration runner.
  *
  * 1. Creates required Postgres extensions (pgvector, pg_trgm, pg_search).
- * 2. Runs Drizzle generated migrations from the `drizzle/` folder.
- * 3. Creates the ParadeDB BM25 index on chunks.content for full-text search.
+ * 2. Runs Drizzle file-based migrations from the `drizzle/` folder.
+ * 3. Creates the ParadeDB BM25 full-text search index (not expressible
+ *    in the Drizzle schema).
  *
  * All statements are idempotent — safe to call on every startup.
  * Only the worker entrypoint should invoke this; the web and MCP servers
  * assume the schema is already up-to-date.
+ *
+ * The `drizzle/` folder is the single source of truth for DDL, generated
+ * by `pnpm db:generate` from `schema.ts`.  The migration SQL files have
+ * been made idempotent (`IF NOT EXISTS`, `DO $$ ... EXCEPTION ...`) so
+ * they are safe to apply on both fresh and existing databases.
  */
 import type { Sql } from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createDb } from "./db.js";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-/** Resolve the drizzle migrations folder relative to project root. */
-function getMigrationsFolder(): string {
-  // From src/storage/schema/migrate.ts  → ../../../drizzle  (3 levels to project root)
-  // From dist/src/storage/schema/migrate.js → ../../../../drizzle (4 levels to project root)
-  const levels = __dirname.includes(path.join("dist", "src")) ? 4 : 3;
-  const segments = Array.from<string>({ length: levels }).fill("..");
-  return path.resolve(__dirname, ...segments, "drizzle");
-}
+/** Relative to CWD — all entrypoints (worker, tests) run from the project root. */
+const MIGRATIONS_FOLDER = "drizzle";
 
 /**
- * Run all migrations against the given postgres.js client.
+ * Run extensions, Drizzle migrations, and custom indexes against the
+ * given postgres.js client.
  *
  * @param sql - A postgres.js `Sql` instance.
  */
 export async function runMigrations(sql: Sql): Promise<void> {
-  // 1. Enable required extensions
+  // ── 1. Extensions (must exist before tables that reference their types) ──
   await sql`CREATE EXTENSION IF NOT EXISTS vector`;
   await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
   await sql`CREATE EXTENSION IF NOT EXISTS pg_search`;
 
-  // 2. Run Drizzle generated migrations
-  const db = createDb(sql);
-  await migrate(db, { migrationsFolder: getMigrationsFolder() });
+  // ── 2. Drizzle file-based migrations ──
+  const db = drizzle(sql);
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
 
-  // 3. Create ParadeDB BM25 index on chunks.content (idempotent via IF NOT EXISTS)
-  //    Uses the source_code tokenizer for camelCase/snake_case splitting.
+  // ── 3. ParadeDB BM25 index (uses pdb.source_code tokenizer — not
+  //    expressible in the Drizzle schema, so managed here) ──
   await sql`
     CREATE INDEX IF NOT EXISTS idx_chunks_bm25 ON chunks
     USING bm25 (id, (content::pdb.source_code))

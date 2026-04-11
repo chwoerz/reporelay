@@ -3,7 +3,9 @@
  *
  * Tables: repos, repoRefs, fileContents, refFiles, symbols, chunks.
  * Custom column types: vector(768) via drizzle built-in.
- * Full-text search: ParadeDB BM25 index on chunks.content (managed in migrate.ts).
+ * Full-text search: ParadeDB BM25 index on chunks.content (applied in migrate.ts
+ * after Drizzle file-based migrations, since ParadeDB syntax is not expressible
+ * in the Drizzle schema).
  *
  * Content-addressable design: `fileContents` stores unique file content
  * (keyed by sha256). `refFiles` is a junction table mapping a ref+path
@@ -120,6 +122,8 @@ export const chunks = pgTable(
     startLine: integer("start_line").notNull(),
     endLine: integer("end_line").notNull(),
     embedding: vector("embedding", { dimensions: 768 }),
+    /** Error message when embedding failed for this chunk (Ollama timeout, token overflow, etc.). */
+    embeddingError: text("embedding_error"),
   },
   (t) => [index("idx_chunks_embedding").using("hnsw", t.embedding.op("vector_cosine_ops"))],
 );

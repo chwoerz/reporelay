@@ -1,5 +1,5 @@
 {
-  "id": "0194faf6-0501-4d5e-9943-ba70c2e20136",
+  "id": "0df12411-9bdf-40e7-bc84-2662255f0622",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -47,6 +47,12 @@
         "embedding": {
           "name": "embedding",
           "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_error": {
+          "name": "embedding_error",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
@@ -438,12 +444,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "default_branch": {
-          "name": "default_branch",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
         },
         "glob_patterns": {
           "name": "glob_patterns",

@@ -139,10 +139,11 @@ describe("OllamaEmbedder (live)", () => {
     // Force small batch size to exercise batching logic
     const results = await embedInBatches(embedder, texts, 2);
 
-    expect(results).toHaveLength(5);
-    results.forEach((vec) => {
+    expect(results.embeddings).toHaveLength(5);
+    expect(results.failures).toHaveLength(0);
+    results.embeddings.forEach((vec) => {
       expect(vec).toHaveLength(768);
-      expect(vec.some((v) => v !== 0)).toBe(true);
+      expect(vec!.some((v) => v !== 0)).toBe(true);
     });
   });
 
@@ -152,6 +153,7 @@ describe("OllamaEmbedder (live)", () => {
     if (!available) return;
 
     const embedder = createEmbedder({
+      provider: "ollama",
       url: OLLAMA_URL,
       model: "nomic-embed-text",
     });

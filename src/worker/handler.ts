@@ -234,6 +234,14 @@ function pipelineProgressCallback(
           stageMessage: `Embedded ${event.chunksEmbedded}/${event.chunksTotal} chunk(s)…`,
         });
         break;
+      case "embedding-failures":
+        for (const f of event.failures) {
+          logger.warn(
+            { repo: job.repo, ref: job.ref, chunkId: f.chunkId, filePath: f.filePath, error: f.error },
+            "Chunk embedding failed (stored as error)",
+          );
+        }
+        break;
       case "finalizing":
         // Do NOT set stage here — the pipeline's own updateWhere (pipeline.ts)
         // sets stage to "ready" immediately after this callback fires.

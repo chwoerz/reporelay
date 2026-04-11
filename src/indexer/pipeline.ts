@@ -24,7 +24,7 @@ import {
 import { buildIgnoreFilterFromRepo, classifyLanguage, filterIgnored } from "../git/index.js";
 import { parse } from "../parser/index.js";
 import { chunkFile, type ChunkOutput } from "./chunker.js";
-import { type Embedder, embedInBatches } from "./embedder.js";
+import { type Embedder, type EmbedBatchResult, embedInBatches } from "./embedder.js";
 import type { Language, LanguageStats, ParsedImport, ParsedSymbol } from "../core/types.js";
 
 // ── Types ──
@@ -74,6 +74,7 @@ export type PipelineProgressEvent =
   | { type: "file-error"; path: string; error: string }
   | { type: "embedding-start"; chunksTotal: number }
   | { type: "embedding-batch-done"; chunksEmbedded: number; chunksTotal: number }
+  | { type: "embedding-failures"; failures: { chunkId: number; filePath: string; error: string }[] }
   | { type: "finalizing" };
 
 export type PipelineProgressCallback = (event: PipelineProgressEvent) => void;
@@ -93,6 +94,8 @@ export type FileSkipReason = "too-large" | "minified-or-generated" | "read-error
 interface NewChunkRow {
   chunkId: number;
   content: string;
+  /** Source file path — carried through so embedding failures can report which file. */
+  filePath: string;
 }
 
 // ── Helpers ──
@@ -227,6 +230,7 @@ async function storeChunks(
   fileContentId: number,
   chunkOutputs: ChunkOutput[],
   symbolIdMap: Map<string, number>,
+  filePath: string,
 ): Promise<NewChunkRow[]> {
   return Promise.all(
     chunkOutputs.map(async (co) => {
@@ -237,7 +241,7 @@ async function storeChunks(
         startLine: co.startLine,
         endLine: co.endLine,
       });
-      return { chunkId: stored.id, content: co.content };
+      return { chunkId: stored.id, content: co.content, filePath };
     }),
   );
 }
@@ -283,7 +287,7 @@ async function indexNewFile(
     storeImports(repos.imp, fc.id, imports),
   ]);
   const chunkOutputs = chunkFile(content, symbols, imports, { maxTokens });
-  return storeChunks(repos.chunk, fc.id, chunkOutputs, symbolIdMap);
+  return storeChunks(repos.chunk, fc.id, chunkOutputs, symbolIdMap, file.path);
 }
 
 /** Process a single file: dedup by SHA-256 or index as new. */
@@ -324,14 +328,14 @@ async function processFile(
     const existingChunks = await repos.chunk.findByFileContentId(existing.id);
     const unembedded = existingChunks
       .filter((c) => c.embedding == null)
-      .map((c) => ({ chunkId: c.id, content: c.content }));
+      .map((c) => ({ chunkId: c.id, content: c.content, filePath: file.path }));
     return { chunks: unembedded };
   }
   const chunks = await indexNewFile(repos, { content, hash, file, repoRefId, maxTokens });
   return { chunks };
 }
 
-/** Embed all new chunks and persist the vectors. */
+/** Embed all new chunks and persist the vectors (or record failures). */
 async function embedNewChunks(opts: {
   embedder: Embedder;
   chunkRepo: ChunkRepository;
@@ -351,14 +355,22 @@ async function embedNewChunks(opts: {
   const texts = newChunkRows.map((r) => r.content);
   // Embed in batches and report progress per batch
   let embedded = 0;
-  const allEmbeddings: number[][] = [];
+  const allResults: EmbedBatchResult = { embeddings: [], failures: [] };
   for (let i = 0; i < texts.length; i += batchSize) {
     // Check for cancellation between embedding batches
     if (i > 0) await assertRefExists(db, repoRefId);
 
     const batch = texts.slice(i, i + batchSize);
-    const batchEmbeddings = await embedInBatches(embedder, batch, batchSize);
-    allEmbeddings.push(...batchEmbeddings);
+    const batchResult = await embedInBatches(embedder, batch, batchSize);
+
+    // Re-map failure indices from batch-local to global
+    const globalFailures = batchResult.failures.map((f) => ({
+      index: f.index + i,
+      error: f.error,
+    }));
+    allResults.embeddings.push(...batchResult.embeddings);
+    allResults.failures.push(...globalFailures);
+
     embedded += batch.length;
     onProgress?.({
       type: "embedding-batch-done",
@@ -367,8 +379,26 @@ async function embedNewChunks(opts: {
     });
   }
 
-  const updates = newChunkRows.map((r, i) => ({ id: r.chunkId, embedding: allEmbeddings[i] }));
+  // Build update list — `null` embeddings keep the column NULL and get an error reason
+  const updates = newChunkRows.map((r, i) => {
+    const failure = allResults.failures.find((f) => f.index === i);
+    return {
+      id: r.chunkId,
+      embedding: allResults.embeddings[i] ?? null,
+      embeddingError: failure?.error ?? null,
+    };
+  });
   await chunkRepo.updateEmbeddingsBatch(updates);
+
+  // Notify callers about failures so they can log / surface them
+  if (allResults.failures.length > 0) {
+    const failedChunks = allResults.failures.map((f) => ({
+      chunkId: newChunkRows[f.index]!.chunkId,
+      filePath: newChunkRows[f.index]!.filePath,
+      error: f.error,
+    }));
+    onProgress?.({ type: "embedding-failures", failures: failedChunks });
+  }
 }
 
 /**

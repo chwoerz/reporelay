@@ -57,6 +57,33 @@ describe("Storage Schema (integration)", () => {
     it("is idempotent (running twice does not error)", async () => {
       await expect(runMigrations(getSql())).resolves.not.toThrow();
     });
+
+    it("creates the Drizzle migrations journal table", async () => {
+      const result = await getSql()`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'drizzle'
+          AND table_name = '__drizzle_migrations'
+      `;
+      expect(result).toHaveLength(1);
+    });
+
+    it("creates the ParadeDB BM25 full-text search index", async () => {
+      const result = await getSql()`
+        SELECT indexname FROM pg_indexes
+        WHERE tablename = 'chunks'
+          AND indexname = 'idx_chunks_bm25'
+      `;
+      expect(result).toHaveLength(1);
+    });
+
+    it("creates the HNSW vector cosine ops index", async () => {
+      const result = await getSql()`
+        SELECT indexname FROM pg_indexes
+        WHERE tablename = 'chunks'
+          AND indexname = 'idx_chunks_embedding'
+      `;
+      expect(result).toHaveLength(1);
+    });
   });
 
   describe("repos table", () => {

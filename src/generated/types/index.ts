@@ -21,7 +21,7 @@ export type { GetIndexingStatus200, GetIndexingStatus404, GetIndexingStatusPathP
 export type { GetRepo200, GetRepo404, GetRepoPathParams, GetRepoQuery, GetRepoQueryResponse } from "./GetRepo.js";
 export type { GetSymbol200, GetSymbol404, GetSymbolPathParams, GetSymbolQuery, GetSymbolQueryParams, GetSymbolQueryResponse } from "./GetSymbol.js";
 export type { GitRefs } from "./GitRefs.js";
-export type { HealthResponse } from "./HealthResponse.js";
+export type { EmbedderStatusEnumKey, HealthResponse, HealthResponseStatusEnumKey } from "./HealthResponse.js";
 export type { ImportReference } from "./ImportReference.js";
 export type { IndexingProgress } from "./IndexingProgress.js";
 export type { IndexingStage, IndexingStageEnumKey } from "./IndexingStage.js";
@@ -41,5 +41,7 @@ export type { UpdateRepo200, UpdateRepo400, UpdateRepo404, UpdateRepoMutation, U
 export type { UpdateRepoBody } from "./UpdateRepoBody.js";
 export { contextBodyStrategyEnum } from "./ContextBody.js";
 export { findQueryParamsKindEnum } from "./Find.js";
+export { embedderStatusEnum } from "./HealthResponse.js";
+export { healthResponseStatusEnum } from "./HealthResponse.js";
 export { indexingStageEnum } from "./IndexingStage.js";
 export { repoMirrorStatusEnum } from "./Repo.js";

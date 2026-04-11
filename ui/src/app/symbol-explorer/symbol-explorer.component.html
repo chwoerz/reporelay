@@ -28,70 +28,111 @@
   <p class="error">{{ error() }}</p>
 }
 
-<!-- Find results -->
-@if (findResults().length > 0) {
-  <div class="action-list find-results">
-    @for (r of findResults(); track $index) {
-      @if (kind() === 'symbol') {
-        <button class="action-list-item" (click)="lookupSymbol(r.name!)">
-          <span class="mi">code</span>
-          <div>
-            <div class="action-list-item-title">
-              <span class="sym-kind">{{ r.kind }}</span> {{ r.name }}
+<div class="explorer-layout">
+  <!-- Left panel: search results + symbol detail -->
+  <aside class="results-panel" [class.full-width]="!selectedPath()">
+    @if (findResults().length > 0) {
+      <div class="action-list find-results">
+        @for (r of findResults(); track $index) {
+          @if (kind() === 'symbol') {
+            <button
+              class="action-list-item"
+              [class.active]="r.name === selectedSymbolName()"
+              (click)="lookupSymbol(r)"
+            >
+              <span class="mi">code</span>
+              <div>
+                <div class="action-list-item-title">
+                  <span class="sym-kind">{{ r.kind }}</span> {{ r.name }}
+                </div>
+                <div class="action-list-item-line sym-file">{{ r.filePath }} L{{ r.startLine }}–{{ r.endLine }}</div>
+              </div>
+            </button>
+          } @else {
+            <button class="action-list-item" (click)="navigateToFile(r.path!)">
+              <span class="mi">description</span>
+              <div class="action-list-item-title">{{ r.path }}</div>
+            </button>
+          }
+        }
+      </div>
+    }
+
+    @if (!loading() && searched() && findResults().length === 0) {
+      <p class="empty">No matches found.</p>
+    }
+
+    <!-- Symbol detail -->
+    @if (symbolDetail(); as detail) {
+      <div class="symbol-detail">
+        <h3>{{ selectedSymbolName() }}</h3>
+        @for (sym of detail.symbols; track sym.name) {
+          <div class="card symbol-card">
+            <div class="symbol-meta">
+              <span class="chip sym-kind-badge">{{ sym.kind }}</span>
+              <a [routerLink]="['/', repoName(), refName(), 'browse']" [queryParams]="{ path: sym.filePath }">
+                {{ sym.filePath }}
+              </a>
+              <span class="line-range">L{{ sym.startLine }}–{{ sym.endLine }}</span>
             </div>
-            <div class="action-list-item-line sym-file">{{ r.filePath }} L{{ r.startLine }}–{{ r.endLine }}</div>
+            @if (sym.documentation) {
+              <p class="sym-doc">{{ sym.documentation }}</p>
+            }
+            <div class="sig">{{ sym.signature }}</div>
           </div>
-        </button>
-      } @else {
-        <button class="action-list-item" (click)="navigateToFile(r.path!)">
-          <span class="mi">description</span>
-          <div class="action-list-item-title">{{ r.path }}</div>
-        </button>
-      }
+        }
+
+        @if (detail.imports && detail.imports.length > 0) {
+          <h4>Imported by</h4>
+          <div class="action-list imports-list">
+            @for (imp of detail.imports; track $index) {
+              <button class="action-list-item" (click)="openFile(imp.filePath)">
+                <span class="mi">import_export</span>
+                <div>
+                  <div class="action-list-item-title">{{ imp.filePath }}</div>
+                  <div class="action-list-item-line import-source">from "{{ imp.source }}" {{ imp.isDefault ? '(default)' : '(named)' }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
     }
-  </div>
-}
+  </aside>
 
-@if (!loading() && searched() && findResults().length === 0) {
-  <p class="empty">No matches found.</p>
-}
-
-<!-- Symbol detail -->
-@if (symbolDetail(); as detail) {
-  <div class="symbol-detail">
-    <h3>{{ selectedSymbolName() }}</h3>
-    @for (sym of detail.symbols; track sym.name) {
-      <div class="card symbol-card">
-        <div class="symbol-meta">
-          <span class="chip sym-kind-badge">{{ sym.kind }}</span>
-          <a [routerLink]="['/', repoName(), refName(), 'browse']" [queryParams]="{ path: sym.filePath }">
-            {{ sym.filePath }}
-          </a>
-          <span class="line-range">L{{ sym.startLine }}–{{ sym.endLine }}</span>
+  <!-- Right panel: file content viewer (only when a symbol is selected) -->
+  @if (selectedPath()) {
+    <section class="content-panel">
+      @if (fileLoading()) {
+        <div class="spinner-container">
+          <span class="spinner spinner-lg"></span>
         </div>
-        @if (sym.documentation) {
-          <p class="sym-doc">{{ sym.documentation }}</p>
-        }
-        <div class="sig">{{ sym.signature }}</div>
-        @if (sym.source) {
-          <pre class="code-block"><code [innerHTML]="sym.source | highlight:langFor(sym.filePath)"></code></pre>
-        }
-      </div>
-    }
+      }
 
-    @if (detail.imports && detail.imports.length > 0) {
-      <h4>Imported by</h4>
-      <div class="action-list imports-list">
-        @for (imp of detail.imports; track $index) {
-          <a class="action-list-item" [routerLink]="['/', repoName(), refName(), 'browse']" [queryParams]="{ path: imp.filePath }">
-            <span class="mi">import_export</span>
-            <div>
-              <div class="action-list-item-title">{{ imp.filePath }}</div>
-              <div class="action-list-item-line import-source">from "{{ imp.source }}" {{ imp.isDefault ? '(default)' : '(named)' }}</div>
-            </div>
-          </a>
+      @if (fileError()) {
+        <p class="error" style="padding: 1rem;">{{ fileError() }}</p>
+      }
+
+      @if (fileData(); as f) {
+        <div class="file-header">
+          <span class="file-path-display">{{ f.path }}</span>
+          @if (f.symbols && f.symbols.length > 0) {
+            <span class="symbol-count">{{ f.symbols.length }} symbol(s)</span>
+          }
+        </div>
+
+        @if (f.symbols && f.symbols.length > 0) {
+          <div class="symbols-bar">
+            @for (sym of f.symbols; track sym.name) {
+              <span class="chip chip-clickable sym-chip" (click)="scrollToLine(sym.startLine)">
+                <span class="sym-kind-label">{{ sym.kind }}</span> {{ sym.name }}
+              </span>
+            }
+          </div>
         }
-      </div>
-    }
-  </div>
-}
+
+        <pre class="code-block code-view" #codeView><code [innerHTML]="highlightedContent()"></code></pre>
+      }
+    </section>
+  }
+</div>

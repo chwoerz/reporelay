@@ -13,8 +13,33 @@
   width: 140px;
 }
 
+/* ── Two-panel layout ── */
+
+.explorer-layout {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  min-height: 70vh;
+}
+
+.results-panel {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.results-panel.full-width {
+  width: 100%;
+}
+
 .find-results {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.action-list-item.active {
+  background: var(--cw-accent-dim);
+  border-left: 2px solid var(--cw-accent-bright);
 }
 
 .sym-kind {
@@ -28,8 +53,10 @@
   font-family: var(--cw-font-mono);
 }
 
+/* ── Symbol detail (left panel) ── */
+
 .symbol-detail {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
 .symbol-card {
@@ -85,4 +112,65 @@
 
 .import-source {
   font-family: var(--cw-font-mono);
+}
+
+/* ── Right panel: file viewer ── */
+
+.content-panel {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+  overflow: hidden;
+  background: var(--cw-bg-surface);
+}
+
+.file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1rem;
+  background: var(--cw-bg-panel);
+  border-bottom: 1px solid var(--cw-border);
+  font-size: 0.92rem;
+}
+
+.file-path-display {
+  font-weight: 600;
+  font-family: var(--cw-font-mono);
+  color: var(--cw-text-primary);
+}
+
+.symbol-count {
+  color: var(--cw-text-muted);
+  font-size: 0.8rem;
+}
+
+.symbols-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--cw-bg-surface);
+  border-bottom: 1px solid var(--cw-border);
+}
+
+.sym-chip {
+  color: var(--cw-accent-bright);
+}
+.sym-chip:hover {
+  background: var(--cw-indigo-subtle-hover);
+}
+
+.sym-kind-label {
+  color: var(--cw-text-muted);
+  font-style: italic;
+}
+
+.code-view {
+  min-height: 300px;
+}
+
+.code-view code {
+  font-size: 0.85rem;
 }

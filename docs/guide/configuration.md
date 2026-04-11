@@ -4,12 +4,15 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 
 ## Server Environment Variables
 
-| Variable                 | Default                                                     | Description                                                |
-| :----------------------- | :---------------------------------------------------------- | :--------------------------------------------------------- |
-| `DATABASE_URL`           | `postgresql://reporelay:reporelay@localhost:5432/reporelay` | Postgres connection string                                 |
-| `EMBEDDING_URL`          | `http://localhost:11434`                                    | Embedding API endpoint (Ollama)                            |
-| `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                       |
-| `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                          |
+| Variable                 | Default                                                     | Description                                                        |
+| :----------------------- | :---------------------------------------------------------- | :----------------------------------------------------------------- |
+| `DATABASE_URL`           | `postgresql://reporelay:reporelay@localhost:5432/reporelay` | Postgres connection string                                         |
+| `EMBEDDING_PROVIDER`     | `ollama`                                                    | Embedding provider (`ollama` or `openai`)                          |
+| `EMBEDDING_URL`          | _(provider default)_                                        | Embedding API base URL (ollama: `:11434`, openai: OpenAI API)      |
+| `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                               |
+| `EMBEDDING_DIMENSIONS`   | —                                                           | Dimension override (e.g. `768` for OpenAI text-embedding-3)        |
+| `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                                  |
+| `OPENAI_API_KEY`         | —                                                           | API key (required when `EMBEDDING_PROVIDER=openai`)                |
 | `MCP_SERVER_PORT`        | `3000`                                                      | MCP HTTP server port                                       |
 | `MCP_LANGUAGES`          | —                                                           | Comma-separated language filter (skips auto-detection)     |
 | `MCP_LANGUAGE_THRESHOLD` | `10`                                                        | Min language_stats % for repo filtering (0 = disabled)     |

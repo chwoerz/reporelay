@@ -4,8 +4,11 @@
 # the .env file uses for local `pnpm dev`.
 x-shared-env: &shared-env
   DATABASE_URL: postgresql://reporelay:reporelay@postgres:5432/reporelay
-  EMBEDDING_URL: http://host.docker.internal:11434
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-ollama}
+  EMBEDDING_URL: ${EMBEDDING_URL:-}
   EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+  EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   GIT_MIRRORS_DIR: /data/mirrors
   LOG_LEVEL: ${LOG_LEVEL:-info}
 

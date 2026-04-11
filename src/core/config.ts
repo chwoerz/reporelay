@@ -7,55 +7,85 @@ import { Languages } from "./types.js";
 
 // ── Schema ──
 
-export const configSchema = z.object({
-  // Database
-  DATABASE_URL: z.string().default("postgresql://reporelay:reporelay@localhost:5432/reporelay"),
+export const EmbeddingProviders = ["ollama", "openai"] as const;
+export type EmbeddingProvider = (typeof EmbeddingProviders)[number];
 
-  // Embedding
-  EMBEDDING_URL: z.url().default("http://localhost:11434"),
-  EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
-  EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
+export const configSchema = z
+  .object({
+    // Database
+    DATABASE_URL: z.string().default("postgresql://reporelay:reporelay@localhost:5432/reporelay"),
 
-  // CORS
-  /**
-   * Comma-separated list of allowed CORS origins.
-   * When unset, only same-origin requests are allowed (CORS disabled).
-   * Use "*" to allow all origins (development only — NOT recommended for production).
-   * Example: "http://localhost:4200,https://my-app.example.com"
-   */
-  CORS_ORIGIN: z.string().optional(),
+    // Embedding
+    EMBEDDING_PROVIDER: z.enum(EmbeddingProviders).default("ollama"),
+    /**
+     * Base URL for the embedding API.
+     * When unset, a provider-specific default is used:
+     * - ollama → http://localhost:11434
+     * - openai → https://api.openai.com/v1
+     *
+     * Set this explicitly when using a custom OpenAI-compatible provider
+     * (Azure, Together, Mistral, etc.).
+     */
+    EMBEDDING_URL: z.url().optional(),
+    EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
+    EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
+    /**
+     * Number of dimensions to request from the embedding API.
+     * Only supported by some providers (e.g. OpenAI text-embedding-3).
+     * Must produce vectors matching DB_EMBEDDING_DIMENSIONS (768) or
+     * init() will report a mismatch.
+     * When unset, the model's native dimension is used.
+     */
+    EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().optional(),
 
-  // MCP
-  MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
-  /**
-   * Comma-separated list of languages to include in MCP search results.
-   * When set, only files/chunks in these languages are returned.
-   * When empty/unset, languages are auto-detected from the current working
-   * directory's manifest files (e.g. package.json → typescript, Cargo.toml → rust).
-   * If auto-detection finds nothing, all languages are included.
-   * Example: "java,kotlin" or "typescript,javascript"
-   */
-  MCP_LANGUAGES: z.string().optional(),
-  /**
-   * Minimum language_stats percentage (0–100) for a repo ref to be
-   * considered a match when filtering by language.
-   * A ref is included if at least one of its detected languages meets this threshold.
-   * Set to 0 to disable language-based repo filtering entirely
-   * (all repos are served regardless of detected languages).
-   * Default: 10 (i.e. the language must represent ≥10% of the ref's files).
-   */
-  MCP_LANGUAGE_THRESHOLD: z.coerce.number().min(0).max(100).default(10),
+    // OpenAI-compatible embedding provider
+    /** API key for OpenAI-compatible embedding providers. Required when EMBEDDING_PROVIDER=openai. */
+    OPENAI_API_KEY: z.string().optional(),
 
-  // Web
-  WEB_PORT: z.coerce.number().int().positive().default(3001),
+    // CORS
+    /**
+     * Comma-separated list of allowed CORS origins.
+     * When unset, only same-origin requests are allowed (CORS disabled).
+     * Use "*" to allow all origins (development only — NOT recommended for production).
+     * Example: "http://localhost:4200,https://my-app.example.com"
+     */
+    CORS_ORIGIN: z.string().optional(),
 
-  // Git
-  GIT_MIRRORS_DIR: z.string().default(".reporelay/mirrors"),
-  GIT_WORKTREES_DIR: z.string().default(".reporelay/worktrees"),
+    // MCP
+    MCP_SERVER_PORT: z.coerce.number().int().positive().default(3000),
+    /**
+     * Comma-separated list of languages to include in MCP search results.
+     * When set, only files/chunks in these languages are returned.
+     * When empty/unset, languages are auto-detected from the current working
+     * directory's manifest files (e.g. package.json → typescript, Cargo.toml → rust).
+     * If auto-detection finds nothing, all languages are included.
+     * Example: "java,kotlin" or "typescript,javascript"
+     */
+    MCP_LANGUAGES: z.string().optional(),
+    /**
+     * Minimum language_stats percentage (0–100) for a repo ref to be
+     * considered a match when filtering by language.
+     * A ref is included if at least one of its detected languages meets this threshold.
+     * Set to 0 to disable language-based repo filtering entirely
+     * (all repos are served regardless of detected languages).
+     * Default: 10 (i.e. the language must represent ≥10% of the ref's files).
+     */
+    MCP_LANGUAGE_THRESHOLD: z.coerce.number().min(0).max(100).default(10),
 
-  // Logging
-  LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
-});
+    // Web
+    WEB_PORT: z.coerce.number().int().positive().default(3001),
+
+    // Git
+    GIT_MIRRORS_DIR: z.string().default(".reporelay/mirrors"),
+    GIT_WORKTREES_DIR: z.string().default(".reporelay/worktrees"),
+
+    // Logging
+    LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
+  })
+  .refine((c) => c.EMBEDDING_PROVIDER !== "openai" || !!c.OPENAI_API_KEY, {
+    message: "OPENAI_API_KEY is required when EMBEDDING_PROVIDER=openai",
+    path: ["OPENAI_API_KEY"],
+  });
 
 export type Config = z.infer<typeof configSchema>;
 

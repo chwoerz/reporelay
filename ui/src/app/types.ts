@@ -21,3 +21,4 @@ export type { GitRefs } from '@api/GitRefs';
 export type { IndexingProgress } from '@api/IndexingProgress';
 export type { IndexingStage } from '@api/IndexingStage';
 export { indexingStageEnum } from '@api/IndexingStage';
+export type { HealthResponse } from '@api/HealthResponse';

@@ -130,7 +130,14 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
 
   // ── GET /health ──
   app.get(apiPaths.getHealth, async (_req, reply) => {
-    return reply.send({ status: "ok" });
+    const embedderOk = deps.embedder.initError === null;
+    return reply.send({
+      status: embedderOk ? "ok" : "degraded",
+      embedder: {
+        status: embedderOk ? "ok" : "error",
+        ...(deps.embedder.initError ? { error: deps.embedder.initError } : {}),
+      },
+    });
   });
 
   // ── GET /api/git-credentials/hosts ──
@@ -596,7 +603,10 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
 export function parseCorsOrigin(raw?: string): boolean | string[] {
   if (!raw || !raw.trim()) return false;
   if (raw.trim() === "*") return true;
-  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /** Maximum allowed value for the search `limit` query parameter. */

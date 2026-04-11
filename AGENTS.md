@@ -146,6 +146,11 @@ ui/            Angular 21 admin dashboard (see ui/DESIGN.md for UI design spec)
 - OpenAPI spec (`openapi.yaml`) is the single source of truth for the REST API.
 - After modifying `openapi.yaml`, run `pnpm generate:api` to regenerate types/schemas.
 - Database schema lives in `src/storage/schema/schema.ts`. After changes, run `pnpm db:generate`.
+- Drizzle file-based migrations in `drizzle/` are applied at runtime via `migrate.ts`.
+  The migration SQL has been made idempotent (`IF NOT EXISTS`, `DO $$ ... EXCEPTION ...`)
+  so it is safe on both fresh and existing databases.
+- Extensions (pgvector, pg_trgm, pg_search) and the ParadeDB BM25 index live in
+  `migrate.ts` as raw SQL because they cannot be expressed in the Drizzle schema.
 
 ### Testing
 

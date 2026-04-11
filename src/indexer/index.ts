@@ -5,8 +5,12 @@ export { chunkFile, estimateTokens, type ChunkOutput, type ChunkerOptions } from
 
 export {
   type Embedder,
+  type EmbeddingFailure,
+  type EmbedBatchResult,
+  type EmbedderOptions,
   DB_EMBEDDING_DIMENSIONS,
   OllamaEmbedder,
+  OpenaiEmbedder,
   embedInBatches,
   createEmbedder,
   truncateForEmbedding,

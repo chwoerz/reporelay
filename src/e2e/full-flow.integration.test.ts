@@ -98,6 +98,7 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     embedder = createMockEmbedder();
     const config: Config = {
       DATABASE_URL: getConnectionString(),
+      EMBEDDING_PROVIDER: "ollama",
       EMBEDDING_URL: "http://localhost:11434",
       EMBEDDING_MODEL: "nomic-embed-text",
       EMBEDDING_BATCH_SIZE: 64,

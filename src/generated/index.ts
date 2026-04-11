@@ -21,7 +21,7 @@ export type { GetIndexingStatus200, GetIndexingStatus404, GetIndexingStatusPathP
 export type { GetRepo200, GetRepo404, GetRepoPathParams, GetRepoQuery, GetRepoQueryResponse } from "./types/GetRepo.js";
 export type { GetSymbol200, GetSymbol404, GetSymbolPathParams, GetSymbolQuery, GetSymbolQueryParams, GetSymbolQueryResponse } from "./types/GetSymbol.js";
 export type { GitRefs } from "./types/GitRefs.js";
-export type { HealthResponse } from "./types/HealthResponse.js";
+export type { EmbedderStatusEnumKey, HealthResponse, HealthResponseStatusEnumKey } from "./types/HealthResponse.js";
 export type { ImportReference } from "./types/ImportReference.js";
 export type { IndexingProgress } from "./types/IndexingProgress.js";
 export type { IndexingStage, IndexingStageEnumKey } from "./types/IndexingStage.js";
@@ -41,6 +41,8 @@ export type { UpdateRepo200, UpdateRepo400, UpdateRepo404, UpdateRepoMutation, U
 export type { UpdateRepoBody } from "./types/UpdateRepoBody.js";
 export { contextBodyStrategyEnum } from "./types/ContextBody.js";
 export { findQueryParamsKindEnum } from "./types/Find.js";
+export { embedderStatusEnum } from "./types/HealthResponse.js";
+export { healthResponseStatusEnum } from "./types/HealthResponse.js";
 export { indexingStageEnum } from "./types/IndexingStage.js";
 export { repoMirrorStatusEnum } from "./types/Repo.js";
 export { buildContext200Schema, buildContext400Schema, buildContext404Schema, buildContext503Schema, buildContextMutationRequestSchema, buildContextMutationResponseSchema, buildContextPathParamsSchema } from "./zod/buildContextSchema.js";

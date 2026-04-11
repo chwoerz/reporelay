@@ -16,5 +16,6 @@ export function createMockEmbedder(): Embedder {
       return texts.map(() => new Array(DB_EMBEDDING_DIMENSIONS).fill(0));
     }),
     init: vi.fn(async () => {}),
+    initError: null,
   };
 }

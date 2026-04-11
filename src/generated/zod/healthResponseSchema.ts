@@ -6,5 +6,9 @@
 import { z } from "zod/v4";
 
 export const healthResponseSchema = z.object({
-    "status": z.string()
+    "status": z.enum(["ok", "degraded"]).describe("Overall service status (\"ok\" or \"degraded\")"),
+"embedder": z.object({
+    "status": z.enum(["ok", "error"]),
+"error": z.optional(z.string().describe("Human-readable error when embedder is unreachable"))
+    }).describe("Embedding provider (Ollama) connectivity status")
     })

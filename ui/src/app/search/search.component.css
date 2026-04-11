@@ -26,6 +26,7 @@
   margin-bottom: 1rem;
   overflow: hidden;
   transition: border-color 0.2s ease;
+  max-width: 960px;
 }
 
 .result-card:hover {
@@ -42,6 +43,7 @@
   font-size: 0.9rem;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--cw-border);
+  min-width: 0;
 }
 
 .result-header a {
@@ -68,6 +70,9 @@
 
 .result-code code {
   font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 /* ═══════════════════════════════════════
