@@ -26,19 +26,17 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Logger } from "pino";
 
-
 /** Tool names that accept an optional `languages` input parameter. */
 export const LANGUAGE_AWARE_TOOLS = new Set(["search_code", "get_symbol", "find", "list_repos"]);
-
 
 export interface ProxyDeps {
   /** URL of the remote RepoRelay MCP endpoint. */
   upstreamUrl: string;
   /** Languages auto-detected from the local working directory (or explicit config). */
   languages?: string[];
+  languageThreshold?: number;
   logger: Logger;
 }
-
 
 /**
  * Enrich tool call arguments with detected languages when applicable.
@@ -52,6 +50,7 @@ export function enrichToolArgs(
   toolName: string,
   args: Record<string, unknown> | undefined,
   languages: string[] | undefined,
+  languageThreshold: number | undefined,
 ): Record<string, unknown> {
   const enriched = { ...args };
   if (
@@ -62,9 +61,15 @@ export function enrichToolArgs(
   ) {
     enriched.languages = languages;
   }
+  if (
+    LANGUAGE_AWARE_TOOLS.has(toolName) &&
+    !enriched.languageThreshold &&
+    languageThreshold !== undefined
+  ) {
+    enriched.languageThreshold = languageThreshold;
+  }
   return enriched;
 }
-
 
 /**
  * Wire a local `Server` to an upstream `Client`, forwarding all MCP
@@ -72,14 +77,19 @@ export function enrichToolArgs(
  *
  * Extracted from `startProxy` so tests can supply in-memory transports.
  */
-export function wireProxy(server: Server, client: Client, languages: string[] | undefined): void {
-    server.setRequestHandler(ListToolsRequestSchema, async (request) => {
+export function wireProxy(
+  server: Server,
+  client: Client,
+  languages: string[] | undefined,
+  languageThreshold: number | undefined,
+): void {
+  server.setRequestHandler(ListToolsRequestSchema, async (request) => {
     return client.listTools(request.params);
   });
 
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const enrichedArgs = enrichToolArgs(name, args, languages);
+    const enrichedArgs = enrichToolArgs(name, args, languages, languageThreshold);
 
     const result = await client.callTool({ name, arguments: enrichedArgs });
 
@@ -92,27 +102,26 @@ export function wireProxy(server: Server, client: Client, languages: string[] | 
     return result;
   });
 
-    server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
+  server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
     return client.listPrompts(request.params);
   });
 
-    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     return client.getPrompt(request.params);
   });
 
-    server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
+  server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
     return client.listResources(request.params);
   });
 
-    server.setRequestHandler(ListResourceTemplatesRequestSchema, async (request) => {
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async (request) => {
     return client.listResourceTemplates(request.params);
   });
 
-    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     return client.readResource(request.params);
   });
 }
-
 
 /**
  * Create the local Server and upstream Client, wire them together,
@@ -129,25 +138,25 @@ export async function startProxy(
   clientTransport?: Transport,
   serverTransport?: Transport,
 ): Promise<{ server: Server; client: Client }> {
-  const { upstreamUrl, languages, logger } = deps;
+  const { upstreamUrl, languages, logger, languageThreshold } = deps;
 
-    const client = new Client({ name: "reporelay-proxy", version: "1.0.0" });
+  const client = new Client({ name: "reporelay-proxy", version: "1.0.0" });
   const cTransport = clientTransport ?? new StreamableHTTPClientTransport(new URL(upstreamUrl));
   await client.connect(cTransport);
   logger.info({ url: upstreamUrl }, "Connected to upstream RepoRelay server");
 
-    const server = new Server(
+  const server = new Server(
     { name: "reporelay-proxy", version: "1.0.0" },
     { capabilities: { tools: {}, resources: {}, prompts: {}, logging: {} } },
   );
 
-  wireProxy(server, client, languages);
+  wireProxy(server, client, languages, languageThreshold);
 
-    const sTransport = serverTransport ?? new StdioServerTransport();
+  const sTransport = serverTransport ?? new StdioServerTransport();
   await server.connect(sTransport);
   logger.info("MCP proxy ready (stdio)");
 
-    if (!serverTransport) {
+  if (!serverTransport) {
     const shutdown = async () => {
       logger.info("Shutting down proxy…");
       await server.close();

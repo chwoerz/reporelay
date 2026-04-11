@@ -8,7 +8,6 @@ import { randomUUID } from "node:crypto";
 import { minimatch } from "minimatch";
 import { resolveGitAuth } from "./git-credentials.js";
 
-
 /**
  * Create a `simpleGit` instance that ignores system credential helpers
  * (macOS Keychain, Windows Credential Manager, etc.) so only the tokens
@@ -21,7 +20,6 @@ function isolatedGit(baseDir?: string): ReturnType<typeof simpleGit> {
   if (baseDir) opts.baseDir = baseDir;
   return simpleGit(opts).env({ GIT_TERMINAL_PROMPT: "0", GIT_ASKPASS: "" });
 }
-
 
 /**
  * Run a git operation with the authenticated remote URL temporarily set.
@@ -53,7 +51,6 @@ async function withAuth<T>(
     await git.raw(["remote", "set-url", "origin", auth.originalUrl]);
   }
 }
-
 
 /**
  * Translate cryptic git remote errors into human-readable messages.
@@ -191,7 +188,6 @@ export async function resolveCommitSha(mirrorPath: string, ref: string): Promise
   return result.trim();
 }
 
-
 /**
  * Check out a worktree at a specific commit SHA.
  *
@@ -225,7 +221,6 @@ export async function cleanupWorktree(mirrorPath: string, worktreePath: string):
   await git.raw(["worktree", "prune"]);
 }
 
-
 export function isFileIncluded(path: string, globPatterns: string[]) {
   return globPatterns.every((p) => minimatch(path, p));
 }
@@ -249,7 +244,6 @@ export async function listFiles(
     .split("\n")
     .filter((f) => f.length > 0 && isFileIncluded(f, globPatterns));
 }
-
 
 export interface GitRefs {
   branches: string[];
@@ -286,7 +280,6 @@ export async function listGitRefs(mirrorPath: string): Promise<GitRefs> {
   return { branches, tags };
 }
 
-
 /**
  * Read raw file content from a bare mirror at a specific commit.
  *
@@ -311,7 +304,6 @@ export async function readFileFromMirror(
     return null;
   }
 }
-
 
 async function exists(path: string): Promise<boolean> {
   try {

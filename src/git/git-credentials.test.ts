@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { normalizeHost, resolveGitAuth } from "./git-credentials.js";
 
-
 describe("normalizeHost", () => {
   it("replaces dots with underscores and uppercases", () => {
     expect(normalizeHost("github.com")).toBe("GITHUB_COM");
@@ -24,9 +23,7 @@ describe("normalizeHost", () => {
   });
 });
 
-
 describe("resolveGitAuth", () => {
-  
   it("returns null for local filesystem paths", () => {
     const env = { GIT_TOKEN_LOCALHOST: "tok" };
     expect(resolveGitAuth("/home/user/repos/my-repo", env)).toBeNull();
@@ -56,7 +53,6 @@ describe("resolveGitAuth", () => {
     expect(resolveGitAuth("not a url at all://broken", {})).toBeNull();
   });
 
-  
   it("uses x-access-token for github.com", () => {
     const env = { GIT_TOKEN_GITHUB_COM: "ghp_abc123" };
     const auth = resolveGitAuth("https://github.com/org/repo.git", env);
@@ -86,7 +82,6 @@ describe("resolveGitAuth", () => {
     );
   });
 
-  
   it("falls back to oauth2 for unknown hosts", () => {
     const env = { GIT_TOKEN_GITEA_MYCOMPANY_COM: "tok_123" };
     const auth = resolveGitAuth("https://gitea.mycompany.com/org/repo.git", env);
@@ -95,7 +90,6 @@ describe("resolveGitAuth", () => {
     expect(auth!.authenticatedUrl).toBe("https://oauth2:tok_123@gitea.mycompany.com/org/repo.git");
   });
 
-  
   it("uses GIT_USER_<HOST> override when set", () => {
     const env = {
       GIT_TOKEN_GITEA_MYCOMPANY_COM: "tok_123",
@@ -121,7 +115,6 @@ describe("resolveGitAuth", () => {
     expect(auth!.authenticatedUrl).toContain("my-app%5Bbot%5D:ghp_abc@github.com");
   });
 
-  
   it("strips pre-existing credentials from originalUrl", () => {
     const env = { GIT_TOKEN_GITHUB_COM: "ghp_new" };
     const auth = resolveGitAuth("https://old-user:old-token@github.com/org/repo.git", env);

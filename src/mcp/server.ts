@@ -18,7 +18,6 @@ import { registerTools } from "./tools.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
 
-
 export interface McpDeps {
   db: Db;
   embedder: Embedder;
@@ -31,7 +30,6 @@ export interface McpDeps {
    */
   languageThreshold?: number;
 }
-
 
 /**
  * Create and configure the McpServer with all tools, resources, and prompts.
@@ -48,7 +46,6 @@ export function createMcpServer(deps: McpDeps): McpServer {
 
   return server;
 }
-
 
 /**
  * Start the MCP server as a stateless HTTP service.

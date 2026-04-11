@@ -14,7 +14,6 @@ import { RefFileRepository } from "../storage/index.js";
 import { ChunkRepository } from "../storage/index.js";
 import { resolveRef } from "./semver-resolver.js";
 
-
 export interface ContextPackInput {
   repo: string;
   repoId: number;
@@ -41,7 +40,6 @@ export interface ContextPack {
   chunks: ContextChunk[];
   totalTokens: number;
 }
-
 
 /** Order chunks by file path, then startLine. */
 function sortChunks(chunks: ContextChunk[]): ContextChunk[] {
@@ -87,7 +85,6 @@ export function formatContextPack(pack: ContextPack): string {
 
   return lines.join("\n").trim();
 }
-
 
 function searchResultsToChunks(results: SearchResult[]): ContextChunk[] {
   return results.map((r) => ({
@@ -173,7 +170,6 @@ async function gatherRecentChanges(db: Db, input: ContextPackInput): Promise<Con
 
   return [...chunks, ...deletedAnnotations];
 }
-
 
 const STRATEGY_MAP: Record<
   ContextStrategy,

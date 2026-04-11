@@ -11,7 +11,6 @@
 import { z } from "zod/v4";
 import { Languages } from "./languages.js";
 
-
 export const proxyConfigSchema = z.object({
   /** URL of the remote RepoRelay MCP endpoint (e.g. http://localhost:3000/mcp). */
   REPORELAY_URL: z.url().optional(),
@@ -26,13 +25,12 @@ export const proxyConfigSchema = z.object({
    * Minimum language_stats percentage for a repo ref to qualify.
    * 0 disables language-based repo filtering entirely (auto-detect is skipped).
    */
-  MCP_LANGUAGE_THRESHOLD: z.coerce.number().int().min(0).max(100).default(10),
+  MCP_LANGUAGE_THRESHOLD: z.coerce.number().int().min(0).max(100).optional(),
 
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 });
 
 export type ProxyConfig = z.infer<typeof proxyConfigSchema>;
-
 
 /**
  * Parse proxy configuration from environment + optional CLI overrides.
@@ -48,7 +46,6 @@ export function loadProxyConfig(
   if (cliUrl) config.REPORELAY_URL = cliUrl;
   return config;
 }
-
 
 /**
  * Parse a comma-separated language string into a validated array.

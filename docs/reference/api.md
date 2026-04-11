@@ -72,10 +72,10 @@ Register a new repository. Triggers a background mirror clone for remote repos.
 **Request Body:**
 | Field | Type | Required | Description |
 |----------------|----------|----------|--------------------------------------|
-| `name`         | string   | yes      | Unique repository name (min 1 char) |
-| `localPath`    | string   | no       | Path to a local git repository      |
-| `remoteUrl`    | string   | no       | Remote git URL (HTTPS)              |
-| `globPatterns` | string[] | no       | File inclusion glob patterns        |
+| `name` | string | yes | Unique repository name (min 1 char) |
+| `localPath` | string | no | Path to a local git repository |
+| `remoteUrl` | string | no | Remote git URL (HTTPS) |
+| `globPatterns` | string[] | no | File inclusion glob patterns |
 
 Either `localPath` or `remoteUrl` must be provided.
 

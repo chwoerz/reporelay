@@ -20,7 +20,6 @@ import { loadProxyConfig, parseLanguageFilter } from "./config.js";
 import { detectLanguagesFromDir } from "./languages.js";
 import { startProxy } from "./proxy-server.js";
 
-
 const { values } = parseArgs({
   options: {
     server: { type: "string", short: "s" },
@@ -28,7 +27,6 @@ const { values } = parseArgs({
   strict: false,
   allowPositionals: true,
 });
-
 
 async function main(): Promise<void> {
   const config = loadProxyConfig(process.env, values.server as string | undefined);
@@ -47,19 +45,22 @@ async function main(): Promise<void> {
   }
 
   // Resolve language filter
-  const threshold = config.MCP_LANGUAGE_THRESHOLD;
+  const languageThreshold = config.MCP_LANGUAGE_THRESHOLD;
   let languages = parseLanguageFilter(config.MCP_LANGUAGES);
 
-  if (threshold === 0) {
+  if (languageThreshold === 0) {
     logger.info("Language-based repo filtering disabled (MCP_LANGUAGE_THRESHOLD=0)");
   } else if (languages) {
-    logger.info({ languages, threshold }, "Language filter active (MCP_LANGUAGES)");
+    logger.info(
+      { languages, threshold: languageThreshold },
+      "Language filter active (MCP_LANGUAGES)",
+    );
   } else {
     const detected = await detectLanguagesFromDir(process.cwd());
     if (detected.length > 0) {
       languages = detected;
       logger.info(
-        { languages, threshold, cwd: process.cwd() },
+        { languages, threshold: languageThreshold, cwd: process.cwd() },
         "Auto-detected languages from working directory",
       );
     } else {
@@ -67,7 +68,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await startProxy({ upstreamUrl, languages, logger });
+  await startProxy({ upstreamUrl, languages, logger, languageThreshold });
 }
 
 main().catch((err) => {

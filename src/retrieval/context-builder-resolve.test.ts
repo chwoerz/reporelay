@@ -8,7 +8,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SearchResult } from "../core/types.js";
 
-
 const mockSearchHybrid = vi.fn();
 const mockResolveRef = vi.fn();
 
@@ -32,7 +31,6 @@ vi.mock("./semver-resolver.js", async (importOriginal) => {
 import { buildContextPack } from "./context-builder.js";
 import type { Db } from "../storage/index.js";
 import type { Embedder } from "../indexer/embedder.js";
-
 
 const fakeDb = {} as Db;
 const fakeEmbedder = {} as Embedder;

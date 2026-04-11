@@ -15,7 +15,6 @@
  */
 import { estimateTokens } from "./chunker.js";
 
-
 export interface Embedder {
   /** Embed an array of texts, returning one vector per text. */
   embed(texts: string[]): Promise<number[][]>;
@@ -43,7 +42,6 @@ export interface Embedder {
  */
 export const DB_EMBEDDING_DIMENSIONS = 768;
 
-
 /**
  * Records a single chunk that could not be embedded.
  * Stored alongside the `null` embedding so callers can persist the error
@@ -65,7 +63,6 @@ export interface EmbedBatchResult {
   embeddings: (number[] | null)[];
   failures: EmbeddingFailure[];
 }
-
 
 export interface OllamaEmbedderOptions {
   /** Ollama API URL. */
@@ -140,7 +137,6 @@ export class OllamaEmbedder implements Embedder {
     return data.embeddings;
   }
 }
-
 
 export interface OpenaiEmbedderOptions {
   /** API key for the OpenAI-compatible provider. */
@@ -252,7 +248,6 @@ export class OpenaiEmbedder implements Embedder {
   }
 }
 
-
 /**
  * Maximum tokens allowed per embedding input.
  *
@@ -353,7 +348,6 @@ export async function embedInBatches(
 
   return { embeddings, failures };
 }
-
 
 /** Discriminated union of options for all supported embedding providers. */
 export type EmbedderOptions =

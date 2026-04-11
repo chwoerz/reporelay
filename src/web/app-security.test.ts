@@ -34,10 +34,7 @@ describe("parseCorsOrigin", () => {
   });
 
   it("filters out empty segments", () => {
-    expect(parseCorsOrigin("http://a.com,,http://b.com")).toEqual([
-      "http://a.com",
-      "http://b.com",
-    ]);
+    expect(parseCorsOrigin("http://a.com,,http://b.com")).toEqual(["http://a.com", "http://b.com"]);
   });
 });
 

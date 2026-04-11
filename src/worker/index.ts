@@ -15,7 +15,6 @@ import type { Logger } from "../core/logger.js";
 import { createQueue, registerIndexHandler, stopQueue } from "../storage/index.js";
 import { handleIndexJob, type WorkerDeps } from "./handler.js";
 
-
 /**
  * Remove leftover worktree directories (`wt-*`) from a previous crash.
  * Safe to call when the directory doesn't exist yet.
@@ -34,7 +33,6 @@ export async function cleanupStaleWorktrees(worktreesDir: string, logger: Logger
     // Directory doesn't exist yet — nothing to clean
   }
 }
-
 
 async function main(): Promise<void> {
   const { config, logger, sql, db, embedder } = await bootstrap({ migrate: true });

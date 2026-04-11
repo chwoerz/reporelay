@@ -2,8 +2,7 @@
  * Application configuration loaded from environment variables.
  * Validated via Zod schema on startup.
  */
-import {z} from "zod/v4";
-
+import { z } from "zod/v4";
 
 export const EmbeddingProviders = ["ollama", "openai"] as const;
 
@@ -99,7 +98,6 @@ export const configSchema = z
   });
 
 export type Config = z.infer<typeof configSchema>;
-
 
 /**
  * Load and validate configuration from environment variables.

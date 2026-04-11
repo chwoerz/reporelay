@@ -18,7 +18,6 @@ import {
   listFilePaths,
 } from "../services/index.js";
 
-
 /**
  * Build the resource listing (repo + ready refs) shared by both resources.
  */
@@ -27,7 +26,7 @@ async function listReadyRepoRefs(
   uriBuilder: (repoName: string, ref: string) => string,
   nameBuilder: (repoName: string, ref: string) => string,
 ) {
-  const entries = await listReposWithRefs(deps.db, deps.languages, deps.languageThreshold);
+  const entries = await listReposWithRefs(deps.db, undefined, deps.languageThreshold);
   const resources = entries.flatMap(({ repo, refs }) =>
     refs
       .filter((ref) => ref.stage === "ready")
@@ -39,9 +38,8 @@ async function listReadyRepoRefs(
   return { resources };
 }
 
-
 export function registerResources(server: McpServer, deps: McpDeps): void {
-    server.registerResource(
+  server.registerResource(
     "file-content",
     new ResourceTemplate("reporelay://{repo}/{ref}/{path+}", {
       list: () =>
@@ -79,7 +77,7 @@ export function registerResources(server: McpServer, deps: McpDeps): void {
     },
   );
 
-    server.registerResource(
+  server.registerResource(
     "directory-tree",
     new ResourceTemplate("reporelay://{repo}/{ref}/tree", {
       list: () =>
@@ -100,7 +98,7 @@ export function registerResources(server: McpServer, deps: McpDeps): void {
         return { contents: [{ uri: uri.href, text: `Not found: ${repoName}@${refStr}` }] };
       }
 
-      const paths = await listFilePaths(deps.db, resolved.ref.id, undefined, deps.languages);
+      const paths = await listFilePaths(deps.db, resolved.ref.id, undefined);
       const text = paths.length > 0 ? paths.join("\n") : "(no files)";
       return { contents: [{ uri: uri.href, text }] };
     },

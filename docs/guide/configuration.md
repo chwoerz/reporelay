@@ -4,24 +4,24 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 
 ## Server Environment Variables
 
-| Variable                 | Default                                                     | Description                                                        |
-| :----------------------- | :---------------------------------------------------------- | :----------------------------------------------------------------- |
-| `DATABASE_URL`           | `postgresql://reporelay:reporelay@localhost:5432/reporelay` | Postgres connection string                                         |
-| `EMBEDDING_PROVIDER`     | `ollama`                                                    | Embedding provider (`ollama` or `openai`)                          |
-| `EMBEDDING_URL`          | _(provider default)_                                        | Embedding API base URL (ollama: `:11434`, openai: OpenAI API)      |
-| `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                               |
-| `EMBEDDING_DIMENSIONS`   | —                                                           | Dimension override (e.g. `768` for OpenAI text-embedding-3)        |
-| `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                                  |
-| `OPENAI_API_KEY`         | —                                                           | API key (required when `EMBEDDING_PROVIDER=openai`)                |
-| `MCP_SERVER_PORT`        | `3000`                                                      | MCP HTTP server port                                       |
-| `MCP_LANGUAGES`          | —                                                           | Comma-separated language filter (skips auto-detection)     |
-| `MCP_LANGUAGE_THRESHOLD` | `10`                                                        | Min language_stats % for repo filtering (0 = disabled)     |
-| `WEB_PORT`               | `3001`                                                      | REST API port                                              |
-| `GIT_MIRRORS_DIR`        | `.reporelay/mirrors`                                        | Bare mirror storage path                                   |
-| `GIT_WORKTREES_DIR`      | `.reporelay/worktrees`                                      | Temporary worktree path                                    |
-| `GIT_TOKEN_<HOST>`       | —                                                           | Auth token for HTTPS remotes (e.g. `GIT_TOKEN_GITHUB_COM`) |
-| `GIT_USER_<HOST>`        | _(auto)_                                                    | Override username for token auth (defaults per host)       |
-| `LOG_LEVEL`              | `info`                                                      | Pino log level                                             |
+| Variable                 | Default                                                     | Description                                                   |
+| :----------------------- | :---------------------------------------------------------- | :------------------------------------------------------------ |
+| `DATABASE_URL`           | `postgresql://reporelay:reporelay@localhost:5432/reporelay` | Postgres connection string                                    |
+| `EMBEDDING_PROVIDER`     | `ollama`                                                    | Embedding provider (`ollama` or `openai`)                     |
+| `EMBEDDING_URL`          | _(provider default)_                                        | Embedding API base URL (ollama: `:11434`, openai: OpenAI API) |
+| `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                          |
+| `EMBEDDING_DIMENSIONS`   | —                                                           | Dimension override (e.g. `768` for OpenAI text-embedding-3)   |
+| `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                             |
+| `OPENAI_API_KEY`         | —                                                           | API key (required when `EMBEDDING_PROVIDER=openai`)           |
+| `MCP_SERVER_PORT`        | `3000`                                                      | MCP HTTP server port                                          |
+| `MCP_LANGUAGES`          | —                                                           | Comma-separated language filter (skips auto-detection)        |
+| `MCP_LANGUAGE_THRESHOLD` | `10`                                                        | Min language_stats % for repo filtering (0 = disabled)        |
+| `WEB_PORT`               | `3001`                                                      | REST API port                                                 |
+| `GIT_MIRRORS_DIR`        | `.reporelay/mirrors`                                        | Bare mirror storage path                                      |
+| `GIT_WORKTREES_DIR`      | `.reporelay/worktrees`                                      | Temporary worktree path                                       |
+| `GIT_TOKEN_<HOST>`       | —                                                           | Auth token for HTTPS remotes (e.g. `GIT_TOKEN_GITHUB_COM`)    |
+| `GIT_USER_<HOST>`        | _(auto)_                                                    | Override username for token auth (defaults per host)          |
+| `LOG_LEVEL`              | `info`                                                      | Pino log level                                                |
 
 ## Proxy Environment Variables
 
@@ -31,7 +31,7 @@ These variables configure the [MCP proxy](/guide/mcp-integration#mcp-proxy-remot
 | :----------------------- | :------ | :------------------------------------------------------- |
 | `REPORELAY_URL`          | —       | Remote RepoRelay MCP endpoint URL                        |
 | `MCP_LANGUAGES`          | —       | Comma-separated language override (skips auto-detection) |
-| `MCP_LANGUAGE_THRESHOLD` | `10`    | Min language_stats % for repo filtering (0 = disabled)   |
+| `MCP_LANGUAGE_THRESHOLD` | —       | Min language_stats % for repo filtering (0 = disabled)   |
 | `LOG_LEVEL`              | `info`  | Pino log level                                           |
 
 The `--server` CLI argument takes priority over `REPORELAY_URL`.

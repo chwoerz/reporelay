@@ -6,7 +6,6 @@
  */
 import { join } from "node:path";
 import type { Db } from "../storage/index.js";
-import type { Embedder } from "../indexer/embedder.js";
 import {
   ChunkRepository,
   FileContentRepository,
@@ -16,13 +15,18 @@ import {
   RepoRepository,
   SymbolRepository,
 } from "../storage/index.js";
-import { resolveRef } from "../retrieval/index.js";
-import { type HybridSearchOptions, searchHybrid } from "../retrieval/index.js";
-import { buildContextPack, type ContextPackInput, formatContextPack } from "../retrieval/index.js";
+import type { Embedder } from "../indexer/embedder.js";
+import {
+  buildContextPack,
+  type ContextPackInput,
+  formatContextPack,
+  type HybridSearchOptions,
+  resolveRef,
+  searchHybrid,
+} from "../retrieval/index.js";
 import { readFileFromMirror } from "../git/git-sync.js";
 
 import type { LanguageStats } from "../core/types.js";
-
 
 export interface ResolvedRepoRef {
   repo: {
@@ -66,7 +70,6 @@ export interface ImportRef {
   source: string;
   isDefault: boolean;
 }
-
 
 export interface RepoWithRefs {
   repo: Awaited<ReturnType<RepoRepository["listAll"]>>[number];
@@ -135,19 +138,12 @@ export async function listReposWithRefs(
 }
 
 /**
- * List all file paths in a resolved ref, optionally filtered by prefix and/or languages.
- * When `languages` is provided, only files whose `file_contents.language` is in the list are returned.
+ * List all file paths in a resolved ref
  */
-export async function listFilePaths(
-  db: Db,
-  refId: number,
-  prefix?: string,
-  languages?: string[],
-): Promise<string[]> {
+export async function listFilePaths(db: Db, refId: number): Promise<string[]> {
   const rfRepo = new RefFileRepository(db);
-  return rfRepo.listPaths(refId, prefix, languages);
+  return rfRepo.listPaths(refId, undefined);
 }
-
 
 /**
  * Resolve a repo name → DB row, returning null when not found.

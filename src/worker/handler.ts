@@ -29,7 +29,6 @@ import type { IndexJob } from "../core/types.js";
 import type { Config } from "../core/config.js";
 import type { Logger } from "../core/logger.js";
 
-
 export interface WorkerDeps {
   db: Db;
   embedder: Embedder;
@@ -52,7 +51,6 @@ interface SyncResult {
   semver: string | undefined;
 }
 
-
 /**
  * Try to extract a clean semver string from a ref name.
  * e.g. "v1.2.3" → "1.2.3", "main" → undefined.
@@ -60,7 +58,6 @@ interface SyncResult {
 export function parseSemver(ref: string): string | undefined {
   return semver.clean(ref) ?? undefined;
 }
-
 
 /** Look up the repo by name and determine its git source. Returns null on failure. */
 async function resolveRepoSource(
@@ -234,7 +231,13 @@ function pipelineProgressCallback(
       case "embedding-failures":
         for (const f of event.failures) {
           logger.warn(
-            { repo: job.repo, ref: job.ref, chunkId: f.chunkId, filePath: f.filePath, error: f.error },
+            {
+              repo: job.repo,
+              ref: job.ref,
+              chunkId: f.chunkId,
+              filePath: f.filePath,
+              error: f.error,
+            },
             "Chunk embedding failed (stored as error)",
           );
         }
@@ -250,7 +253,6 @@ function pipelineProgressCallback(
     }
   };
 }
-
 
 /**
  * Handle a single index job end-to-end.

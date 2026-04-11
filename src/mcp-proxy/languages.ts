@@ -8,7 +8,6 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 
-
 export const Languages = [
   "typescript",
   "javascript",
@@ -23,7 +22,6 @@ export const Languages = [
 ] as const;
 
 export type Language = (typeof Languages)[number];
-
 
 /**
  * Each entry maps a well-known project file to the language(s) it implies.
@@ -62,7 +60,6 @@ const MANIFEST_MAP: { file: string; languages: Language[] }[] = [
   { file: "Makefile", languages: ["c", "cpp"] },
   { file: "meson.build", languages: ["c", "cpp"] },
 ];
-
 
 /**
  * Check whether a file exists at the given path.

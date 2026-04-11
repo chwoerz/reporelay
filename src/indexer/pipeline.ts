@@ -27,7 +27,6 @@ import { chunkFile, type ChunkOutput } from "./chunker.js";
 import { type Embedder, type EmbedBatchResult, embedInBatches } from "./embedder.js";
 import type { Language, LanguageStats, ParsedImport, ParsedSymbol } from "../core/types.js";
 
-
 /** Thrown when the pipeline detects that the ref was deleted mid-run. */
 export class PipelineCancelledError extends Error {
   constructor(repoRefId: number) {
@@ -96,7 +95,6 @@ interface NewChunkRow {
   /** Source file path — carried through so embedding failures can report which file. */
   filePath: string;
 }
-
 
 function sha256(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
@@ -196,7 +194,6 @@ function resolveSymbolId(symbolIdMap: Map<string, number>, co: ChunkOutput): num
     null
   );
 }
-
 
 /** Store parsed symbols and return a name:startLine → id lookup map. */
 async function storeSymbols(
@@ -432,7 +429,6 @@ async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
     throw new PipelineCancelledError(repoRefId);
   }
 }
-
 
 /**
  * Run the indexing pipeline for a single ref.

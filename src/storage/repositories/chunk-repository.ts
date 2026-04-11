@@ -45,9 +45,7 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
    * Find all chunks that have a non-null `embeddingError` for a given
    * file content. Useful for diagnostics / the admin dashboard.
    */
-  async findFailedByFileContentId(
-    fileContentId: number,
-  ): Promise<(typeof chunks.$inferSelect)[]> {
+  async findFailedByFileContentId(fileContentId: number): Promise<(typeof chunks.$inferSelect)[]> {
     return this.findAll(
       and(eq(chunks.fileContentId, fileContentId), isNotNull(chunks.embeddingError)),
     );

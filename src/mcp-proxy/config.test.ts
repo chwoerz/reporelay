@@ -8,7 +8,7 @@ describe("loadProxyConfig", () => {
   it("uses defaults when env is empty", () => {
     const config = loadProxyConfig({});
     expect(config.REPORELAY_URL).toBeUndefined();
-    expect(config.MCP_LANGUAGE_THRESHOLD).toBe(10);
+    expect(config.MCP_LANGUAGE_THRESHOLD).toBeUndefined();
     expect(config.LOG_LEVEL).toBe("info");
   });
 

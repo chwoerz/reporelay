@@ -57,7 +57,6 @@ import {
 } from "../generated/index.js";
 import pino from "pino";
 
-
 export interface AppDeps {
   db: Db;
   boss: PgBoss;
@@ -74,7 +73,6 @@ interface RouteContext {
   rfRepo: RefFileRepository;
   mirrorStatus: Map<string, { status: "cloning" | "ready" | "error"; error?: string }>;
 }
-
 
 /** Look up a repo by name or send a 404. Returns `null` if reply was sent. */
 async function requireRepo(
@@ -121,11 +119,10 @@ function getMirrorError(
   return mirrorStatus.get(name)?.error;
 }
 
-
 function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
   const { deps, refRepo } = ctx;
 
-    app.get(apiPaths.getHealth, async (_req, reply) => {
+  app.get(apiPaths.getHealth, async (_req, reply) => {
     const embedderOk = deps.embedder.initError === null;
     return reply.send({
       status: embedderOk ? "ok" : "degraded",
@@ -136,11 +133,11 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
   });
 
-    app.get(apiPaths.getGitCredentialHosts, async (_req, reply) => {
+  app.get(apiPaths.getGitCredentialHosts, async (_req, reply) => {
     return reply.send(getConfiguredHosts());
   });
 
-    app.get(apiPaths.getAllIndexingStatus, async (_req, reply) => {
+  app.get(apiPaths.getAllIndexingStatus, async (_req, reply) => {
     const active = await refRepo.findActiveProgress();
     const entries = await Promise.all(
       active.map(async (ref) => {
@@ -163,7 +160,7 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(entries);
   });
 
-    app.get<{ Params: { name: string; ref: string } }>(
+  app.get<{ Params: { name: string; ref: string } }>(
     apiPaths.getIndexingStatus,
     async (req, reply) => {
       const repo = await new RepoRepository(deps.db).findByName(req.params.name);
@@ -191,11 +188,10 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
   );
 }
 
-
 function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
   const { deps, repoRepo, refRepo, mirrorStatus } = ctx;
 
-    app.post(apiPaths.createRepo, async (req, reply) => {
+  app.post(apiPaths.createRepo, async (req, reply) => {
     const parsed = createRepoBodySchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]!.message });
@@ -247,7 +243,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
   });
 
-    app.get(apiPaths.listRepos, async (_req, reply) => {
+  app.get(apiPaths.listRepos, async (_req, reply) => {
     const entries = await listReposWithRefs(deps.db);
 
     const result = entries.map(({ repo, refs }) => ({
@@ -267,7 +263,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(result);
   });
 
-    app.get<{ Params: { name: string } }>(apiPaths.getRepo, async (req, reply) => {
+  app.get<{ Params: { name: string } }>(apiPaths.getRepo, async (req, reply) => {
     const repo = await requireRepo(repoRepo, req.params.name, reply);
     if (!repo) return;
 
@@ -288,7 +284,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
   });
 
-    app.get<{ Params: { name: string } }>(apiPaths.getGitRefs, async (req, reply) => {
+  app.get<{ Params: { name: string } }>(apiPaths.getGitRefs, async (req, reply) => {
     const repo = await requireRepo(repoRepo, req.params.name, reply);
     if (!repo) return;
 
@@ -297,7 +293,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(gitRefs);
   });
 
-    app.post<{ Params: { name: string } }>(apiPaths.refreshGitRefs, async (req, reply) => {
+  app.post<{ Params: { name: string } }>(apiPaths.refreshGitRefs, async (req, reply) => {
     const repo = await requireRepo(repoRepo, req.params.name, reply);
     if (!repo) return;
 
@@ -318,7 +314,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(gitRefs);
   });
 
-    app.post<{ Params: { name: string } }>(apiPaths.syncRepo, async (req, reply) => {
+  app.post<{ Params: { name: string } }>(apiPaths.syncRepo, async (req, reply) => {
     const parsed = syncBodySchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: "ref is required." });
@@ -338,7 +334,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.status(202).send({ jobId, repo: repo.name, ref: parsed.data.ref });
   });
 
-    app.patch<{ Params: { name: string } }>(apiPaths.updateRepo, async (req, reply) => {
+  app.patch<{ Params: { name: string } }>(apiPaths.updateRepo, async (req, reply) => {
     const parsed = updateRepoBodySchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]!.message });
@@ -367,7 +363,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
   });
 
-    app.delete<{ Params: { name: string } }>(apiPaths.deleteRepo, async (req, reply) => {
+  app.delete<{ Params: { name: string } }>(apiPaths.deleteRepo, async (req, reply) => {
     const repo = await requireRepo(repoRepo, req.params.name, reply);
     if (!repo) return;
 
@@ -392,7 +388,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.status(204).send();
   });
 
-    app.delete<{ Params: { name: string; ref: string } }>(
+  app.delete<{ Params: { name: string; ref: string } }>(
     apiPaths.deleteVersion,
     async (req, reply) => {
       const repo = await requireRepo(repoRepo, req.params.name, reply);
@@ -418,11 +414,10 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
   );
 }
 
-
 function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
   const { deps, rfRepo } = ctx;
 
-    app.get<{
+  app.get<{
     Querystring: { query: string; repo?: string; ref?: string; limit?: string };
   }>(apiPaths.searchCode, async (req, reply) => {
     const { query, repo, ref, limit } = req.query;
@@ -440,7 +435,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(results);
   });
 
-    app.get<{
+  app.get<{
     Params: { name: string; ref: string };
     Querystring: { prefix?: string };
   }>(apiPaths.getFileTree, async (req, reply) => {
@@ -451,7 +446,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(paths);
   });
 
-    app.get<{
+  app.get<{
     Params: { name: string; ref: string };
     Querystring: { path: string; includeSymbols?: string };
   }>(apiPaths.getFile, async (req, reply) => {
@@ -475,7 +470,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(result);
   });
 
-    app.get<{
+  app.get<{
     Params: { name: string; ref: string; symbolName: string };
     Querystring: { includeImports?: string };
   }>(apiPaths.getSymbol, async (req, reply) => {
@@ -493,7 +488,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(result);
   });
 
-    app.get<{
+  app.get<{
     Params: { name: string; ref: string };
     Querystring: { pattern: string; kind: "file" | "symbol" };
   }>(apiPaths.find, async (req, reply) => {
@@ -523,7 +518,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     );
   });
 
-    app.get<{
+  app.get<{
     Params: { name: string; ref: string; symbolName: string };
   }>(apiPaths.findReferences, async (req, reply) => {
     const resolved = await requireResolvedRef(deps.db, req.params.name, req.params.ref, reply);
@@ -533,7 +528,7 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(refs);
   });
 
-    app.post<{ Params: { name: string } }>(apiPaths.buildContext, async (req, reply) => {
+  app.post<{ Params: { name: string } }>(apiPaths.buildContext, async (req, reply) => {
     const parsed = contextBodySchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]!.message });
@@ -565,7 +560,6 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
   });
 }
-
 
 /**
  * Parse the CORS_ORIGIN config string into a Fastify CORS origin value.
@@ -599,7 +593,6 @@ export function validateRepoName(name: string): string | null {
   if (/[\x00-\x1f]/.test(name)) return "Repository name must not contain control characters.";
   return null;
 }
-
 
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({

@@ -6,7 +6,6 @@ import { readFile } from "node:fs/promises";
 import { join, extname } from "node:path";
 import type { Language } from "../core/types.js";
 
-
 const EXT_MAP: Record<string, Language> = {
   ".ts": "typescript",
   ".tsx": "typescript",
@@ -42,7 +41,6 @@ export function classifyLanguage(filePath: string): Language | null {
   const ext = extname(filePath).toLowerCase();
   return EXT_MAP[ext] ?? null;
 }
-
 
 /** Patterns that are always ignored regardless of .gitignore content. */
 const ALWAYS_IGNORED = [

@@ -14,7 +14,6 @@ import type {
 } from "./base.js";
 import { sym, child, children, getBlockDoc } from "./base.js";
 
-
 /** Walk through nested declarators to find a function name. */
 export function findCFunctionName(node: SyntaxNode): string | null {
   const declarator = node.childForFieldName("declarator");
@@ -58,7 +57,6 @@ export function extractInclude(node: SyntaxNode, imports: ParsedImport[]): void 
     });
   }
 }
-
 
 export class CExtractor implements LanguageExtractor {
   extract(root: SyntaxNode): ParseResult {

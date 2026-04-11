@@ -14,11 +14,14 @@ import { loadConfig, type Config } from "./config.js";
 import { createLogger, type Logger } from "./logger.js";
 import { createDb, type Db } from "../storage/index.js";
 import { runMigrations } from "../storage/index.js";
-import { createEmbedder, OPENAI_DEFAULT_BASE_URL, type Embedder, type EmbedderOptions } from "../indexer/embedder.js";
-
+import {
+  createEmbedder,
+  OPENAI_DEFAULT_BASE_URL,
+  type Embedder,
+  type EmbedderOptions,
+} from "../indexer/embedder.js";
 
 const OLLAMA_DEFAULT_URL = "http://localhost:11434";
-
 
 /** Keys whose values must be redacted in log output. */
 const SECRET_KEYS = ["DATABASE_URL", "OPENAI_API_KEY"];
@@ -32,19 +35,20 @@ export function redactConfig(config: Config): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(config).map(([key, value]) => {
       if (SECRET_KEYS.includes(key) || SECRET_PATTERN.test(key)) {
-        return [key, typeof value === "string" && value.length > 4 ? `****${value.slice(-4)}` : "****"];
+        return [
+          key,
+          typeof value === "string" && value.length > 4 ? `****${value.slice(-4)}` : "****",
+        ];
       }
       return [key, value];
     }),
   );
 }
 
-
 export interface BootstrapOptions {
   /** When true, run Drizzle migrations before returning. Only the worker should set this. */
   migrate?: boolean;
 }
-
 
 export interface BootstrapResult {
   config: Config;
@@ -110,7 +114,6 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapR
 
   return { config, logger, sql, db, embedder };
 }
-
 
 /**
  * Register async cleanup functions that run on SIGTERM/SIGINT via `exit-hook`.

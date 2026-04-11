@@ -7,11 +7,9 @@ import type { ParseResult, ParsedSymbol, ParsedImport, SymbolKind } from "../../
 export type SyntaxNode = Parser.SyntaxNode;
 export type { ParseResult, ParsedSymbol, ParsedImport, SymbolKind };
 
-
 export interface LanguageExtractor {
   extract(root: SyntaxNode): ParseResult;
 }
-
 
 /** 1-based start line. */
 export function sLine(node: SyntaxNode): number {
@@ -63,7 +61,6 @@ export function child(node: SyntaxNode, type: string): SyntaxNode | undefined {
 export function children(node: SyntaxNode, type: string): SyntaxNode[] {
   return node.namedChildren.filter((c) => c.type === type);
 }
-
 
 /** Block-comment doc (`/** … *​/`) for TS, JS, Java, Kotlin, C, C++. */
 export function getBlockDoc(node: SyntaxNode): string | undefined {

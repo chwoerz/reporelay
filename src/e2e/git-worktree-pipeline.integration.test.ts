@@ -37,9 +37,7 @@ import type { Config } from "../core/config.js";
 import { createMockEmbedder } from "../../test/setup/mock-embedder.js";
 import pino from "pino";
 
-
 const silentLogger = pino({ level: "silent" });
-
 
 describe("E2E: git sync → worktree checkout → pipeline → search (integration)", () => {
   let db: Db;
@@ -74,12 +72,12 @@ describe("E2E: git sync → worktree checkout → pipeline → search (integrati
     await stopPostgres();
   });
 
-    // The core test: run handleIndexJob (the real worker handler)
+  // The core test: run handleIndexJob (the real worker handler)
   // which calls syncMirror → checkoutWorktree → runPipeline.
   // Before the resolve() fix, checkoutWorktree created the worktree
   // inside the mirror directory, so readFile failed for every file
   // and the pipeline silently produced 0 chunks.
-  
+
   describe("full index via handleIndexJob with mock embedder", () => {
     it("registers the repo in DB", async () => {
       const repoRepo = new RepoRepository(db);

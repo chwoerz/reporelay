@@ -12,49 +12,51 @@ import { z } from "zod/v4";
 import { enrichToolArgs, LANGUAGE_AWARE_TOOLS, startProxy } from "./proxy-server.js";
 import pino from "pino";
 
-
 describe("enrichToolArgs", () => {
   it("injects languages for a language-aware tool when none provided", () => {
-    const result = enrichToolArgs("search_code", { query: "hello" }, ["typescript"]);
+    const result = enrichToolArgs("search_code", { query: "hello" }, ["typescript"], undefined);
     expect(result).toEqual({ query: "hello", languages: ["typescript"] });
   });
 
   it("does not inject for non-language-aware tools", () => {
-    const result = enrichToolArgs("get_file", { repo: "test" }, ["typescript"]);
+    const result = enrichToolArgs("get_file", { repo: "test" }, ["typescript"], undefined);
     expect(result).toEqual({ repo: "test" });
     expect(result).not.toHaveProperty("languages");
   });
 
   it("does not override when caller already provides languages", () => {
-    const result = enrichToolArgs("search_code", { query: "hi", languages: ["python"] }, [
-      "typescript",
-    ]);
+    const result = enrichToolArgs(
+      "search_code",
+      { query: "hi", languages: ["python"] },
+      ["typescript"],
+      undefined,
+    );
     expect(result.languages).toEqual(["python"]);
   });
 
   it("does not inject when detected languages is undefined", () => {
-    const result = enrichToolArgs("search_code", { query: "hi" }, undefined);
+    const result = enrichToolArgs("search_code", { query: "hi" }, undefined, undefined);
     expect(result).not.toHaveProperty("languages");
   });
 
   it("does not inject when detected languages is empty", () => {
-    const result = enrichToolArgs("search_code", { query: "hi" }, []);
+    const result = enrichToolArgs("search_code", { query: "hi" }, [], undefined);
     expect(result).not.toHaveProperty("languages");
   });
 
   it("handles undefined args gracefully", () => {
-    const result = enrichToolArgs("search_code", undefined, ["typescript"]);
+    const result = enrichToolArgs("search_code", undefined, ["typescript"], undefined);
     expect(result).toEqual({ languages: ["typescript"] });
   });
 
   it("injects for all language-aware tools", () => {
     for (const tool of LANGUAGE_AWARE_TOOLS) {
-      const result = enrichToolArgs(tool, {}, ["go"]);
+      const result = enrichToolArgs(tool, {}, ["go"], 2);
       expect(result.languages).toEqual(["go"]);
+      expect(result.languageThreshold).toEqual(2);
     }
   });
 });
-
 
 describe("proxy wiring (in-memory)", () => {
   let testClient: Client;
@@ -65,7 +67,7 @@ describe("proxy wiring (in-memory)", () => {
   const logger = pino({ level: "silent" });
 
   beforeAll(async () => {
-        // A minimal McpServer that records the arguments it receives.
+    // A minimal McpServer that records the arguments it receives.
     mockUpstream = new McpServer(
       { name: "mock-upstream", version: "1.0.0" },
       { capabilities: { logging: {} } },
@@ -103,10 +105,10 @@ describe("proxy wiring (in-memory)", () => {
       },
     );
 
-        const [proxyClientTransport, upstreamServerTransport] = InMemoryTransport.createLinkedPair();
+    const [proxyClientTransport, upstreamServerTransport] = InMemoryTransport.createLinkedPair();
     await mockUpstream.connect(upstreamServerTransport);
 
-        const [testClientTransport, proxyServerTransport] = InMemoryTransport.createLinkedPair();
+    const [testClientTransport, proxyServerTransport] = InMemoryTransport.createLinkedPair();
 
     await startProxy(
       {
@@ -118,7 +120,7 @@ describe("proxy wiring (in-memory)", () => {
       proxyServerTransport,
     );
 
-        testClient = new Client({ name: "test-client", version: "1.0.0" });
+    testClient = new Client({ name: "test-client", version: "1.0.0" });
     await testClient.connect(testClientTransport);
   });
 

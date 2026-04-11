@@ -2,7 +2,6 @@
  * Shared types and interfaces used across all modules.
  */
 
-
 export const Languages = [
   "typescript",
   "javascript",
@@ -25,7 +24,6 @@ export type Language = (typeof Languages)[number];
  */
 export type LanguageStats = Partial<Record<Language, number>>;
 
-
 export const SymbolKinds = [
   "function",
   "class",
@@ -44,7 +42,6 @@ export const SymbolKinds = [
 
 export type SymbolKind = (typeof SymbolKinds)[number];
 
-
 export interface ParsedSymbol {
   name: string;
   kind: SymbolKind;
@@ -60,7 +57,6 @@ export interface ParsedSymbol {
   content: string;
 }
 
-
 export interface ParsedImport {
   /** Module specifier (e.g. `./foo`, `node:events`, `react`) */
   source: string;
@@ -72,16 +68,12 @@ export interface ParsedImport {
   isNamespace?: boolean;
 }
 
-
 export interface ParseResult {
   symbols: ParsedSymbol[];
   imports: ParsedImport[];
 }
 
-
 export { indexingStageEnum, type IndexingStage } from "../generated/types/IndexingStage.js";
-
-
 
 export interface SearchResult {
   filePath: string;
@@ -94,10 +86,8 @@ export interface SearchResult {
   symbolName?: string;
 }
 
-
 export const ContextStrategies = ["explain", "implement", "debug", "recent-changes"] as const;
 export type ContextStrategy = (typeof ContextStrategies)[number];
-
 
 export interface IndexJob {
   repo: string;

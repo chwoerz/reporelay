@@ -45,7 +45,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
     return { symbols, imports };
   }
 
-  
   private handleExport(node: SyntaxNode, symbols: ParsedSymbol[], imports: ParsedImport[]): void {
     const doc = getBlockDoc(node);
 
@@ -80,7 +79,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
     }
   }
 
-  
   private handleDecl(
     inner: SyntaxNode,
     outer: SyntaxNode,
@@ -113,7 +111,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
     }
   }
 
-  
   private extractMethods(body: SyntaxNode, symbols: ParsedSymbol[]): void {
     body.namedChildren
       .filter((m) => m.type === "method_definition")
@@ -121,7 +118,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
       .forEach((s) => symbols.push(s));
   }
 
-  
   private handleLexical(
     inner: SyntaxNode,
     outer: SyntaxNode,
@@ -140,7 +136,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
       .forEach((s) => symbols.push(s));
   }
 
-  
   private handleCJSExport(node: SyntaxNode, symbols: ParsedSymbol[]): void {
     const assign = child(node, "assignment_expression");
     if (!assign) return;
@@ -152,7 +147,6 @@ export class TypeScriptJavaScriptExtractor implements LanguageExtractor {
     symbols.push(sym("module.exports", "variable", node));
   }
 
-  
   private handleImport(node: SyntaxNode, imports: ParsedImport[]): void {
     const src = node.childForFieldName("source") ?? child(node, "string");
     if (!src) return;

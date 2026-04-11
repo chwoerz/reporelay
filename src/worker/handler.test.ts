@@ -8,7 +8,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import pino from "pino";
 
-
 const mockUpdateProgress = vi.fn().mockResolvedValue(undefined);
 const mockFindByName = vi.fn();
 const mockFindByRepoAndRef = vi.fn();
@@ -116,7 +115,6 @@ describe("cleanupStaleWorktrees", () => {
     ).resolves.not.toThrow();
   });
 });
-
 
 describe("handleIndexJob", () => {
   const job: IndexJob = { repo: "test-repo", ref: "main" };

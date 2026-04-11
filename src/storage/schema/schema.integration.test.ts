@@ -102,9 +102,7 @@ describe("Storage Schema (integration)", () => {
     it("enforces unique repo name", async () => {
       const repoRepo = new RepoRepository(db);
       await repoRepo.insertOne({ name: "unique-test" });
-      await expect(
-        repoRepo.insertOne({ name: "unique-test" }),
-      ).rejects.toThrow();
+      await expect(repoRepo.insertOne({ name: "unique-test" })).rejects.toThrow();
     });
 
     it("cascades delete to repo_refs, ref_files, and transitively to symbols/chunks via file_contents", async () => {

@@ -14,7 +14,6 @@
  *   (everything else) → oauth2
  */
 
-
 const TOKEN_PREFIX = "GIT_TOKEN_";
 const USER_PREFIX = "GIT_USER_";
 
@@ -26,7 +25,6 @@ const KNOWN_HOST_USERS: Record<string, string> = {
 };
 
 const DEFAULT_USER = "oauth2";
-
 
 export interface GitAuth {
   /** HTTPS URL with credentials embedded (https://user:token@host/path). */

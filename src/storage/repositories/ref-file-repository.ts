@@ -1,9 +1,9 @@
 /**
  * Repository for the `ref_files` junction table.
  */
-import { eq, and, sql, ilike, like, inArray } from "drizzle-orm";
+import { and, eq, ilike, inArray, like, sql } from "drizzle-orm";
 import { BaseRepository } from "./base-repository.js";
-import { refFiles, fileContents, type RefFileSelect } from "../schema/schema.js";
+import { fileContents, refFiles, type RefFileSelect } from "../schema/schema.js";
 import type { Db } from "../schema/db.js";
 
 export type ChangeType = "added" | "modified" | "deleted";
@@ -66,20 +66,19 @@ export class RefFileRepository extends BaseRepository<typeof refFiles> {
       from_fc_id: number | null;
       to_fc_id: number | null;
     }>(sql`
-      SELECT
-        f."path"            AS from_path,
-        t."path"            AS to_path,
-        f."file_content_id" AS from_fc_id,
-        t."file_content_id" AS to_fc_id
-      FROM
-        (SELECT "path", "file_content_id" FROM "ref_files" WHERE "repo_ref_id" = ${fromRefId}) f
-      FULL OUTER JOIN
-        (SELECT "path", "file_content_id" FROM "ref_files" WHERE "repo_ref_id" = ${toRefId}) t
-      ON f."path" = t."path"
-      WHERE
-        f."path" IS NULL
-        OR t."path" IS NULL
-        OR f."file_content_id" != t."file_content_id"
+        SELECT f."path"            AS from_path,
+               t."path"            AS to_path,
+               f."file_content_id" AS from_fc_id,
+               t."file_content_id" AS to_fc_id
+        FROM (SELECT "path", "file_content_id"
+              FROM "ref_files"
+              WHERE "repo_ref_id" = ${fromRefId}) f
+                 FULL OUTER JOIN
+             (SELECT "path", "file_content_id" FROM "ref_files" WHERE "repo_ref_id" = ${toRefId}) t
+             ON f."path" = t."path"
+        WHERE f."path" IS NULL
+           OR t."path" IS NULL
+           OR f."file_content_id" != t."file_content_id"
     `);
 
     return rows.map((r) => {
@@ -121,29 +120,17 @@ export class RefFileRepository extends BaseRepository<typeof refFiles> {
   }
 
   /** List all file paths in a ref, optionally filtered by prefix and/or languages. */
-  async listPaths(repoRefId: number, prefix?: string, languages?: string[]): Promise<string[]> {
+  async listPaths(repoRefId: number, prefix?: string): Promise<string[]> {
     const conditions = [eq(refFiles.repoRefId, repoRefId)];
     if (prefix) {
       conditions.push(like(refFiles.path, `${prefix}%`));
     }
 
-    const needsJoin = languages && languages.length > 0;
-    if (needsJoin) {
-      conditions.push(inArray(fileContents.language, languages));
-    }
-
-    const query = needsJoin
-      ? this.db
-          .select({ path: refFiles.path })
-          .from(refFiles)
-          .innerJoin(fileContents, eq(refFiles.fileContentId, fileContents.id))
-          .where(and(...conditions))
-          .orderBy(refFiles.path)
-      : this.db
-          .select({ path: refFiles.path })
-          .from(refFiles)
-          .where(and(...conditions))
-          .orderBy(refFiles.path);
+    const query = this.db
+      .select({ path: refFiles.path })
+      .from(refFiles)
+      .where(and(...conditions))
+      .orderBy(refFiles.path);
 
     const rows = await query;
     return rows.map((r) => r.path);

@@ -25,7 +25,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-
 export const repos = pgTable("repos", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -34,7 +33,6 @@ export const repos = pgTable("repos", {
   globPatterns: text("glob_patterns").array().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-
 
 export const repoRefs = pgTable(
   "repo_refs",
@@ -64,13 +62,11 @@ export const repoRefs = pgTable(
   (t) => [unique("uq_repo_refs_repo_ref").on(t.repoId, t.ref)],
 );
 
-
 export const fileContents = pgTable("file_contents", {
   id: serial("id").primaryKey(),
   sha256: text("sha256").notNull().unique(),
   language: text("language"),
 });
-
 
 export const refFiles = pgTable(
   "ref_files",
@@ -87,7 +83,6 @@ export const refFiles = pgTable(
   (t) => [unique("uq_ref_files_ref_path").on(t.repoRefId, t.path)],
 );
 
-
 export const symbols = pgTable("symbols", {
   id: serial("id").primaryKey(),
   fileContentId: integer("file_content_id")
@@ -100,7 +95,6 @@ export const symbols = pgTable("symbols", {
   endLine: integer("end_line").notNull(),
   documentation: text("documentation"),
 });
-
 
 export const chunks = pgTable(
   "chunks",
@@ -122,7 +116,6 @@ export const chunks = pgTable(
   (t) => [index("idx_chunks_embedding").using("hnsw", t.embedding.op("vector_cosine_ops"))],
 );
 
-
 export const imports = pgTable("imports", {
   id: serial("id").primaryKey(),
   fileContentId: integer("file_content_id")
@@ -133,7 +126,6 @@ export const imports = pgTable("imports", {
   defaultName: text("default_name"),
   isNamespace: integer("is_namespace").notNull().default(0),
 });
-
 
 relations(repos, ({ many }) => ({
   refs: many(repoRefs),
@@ -187,7 +179,6 @@ relations(imports, ({ one }) => ({
     references: [fileContents.id],
   }),
 }));
-
 
 export type RepoSelect = typeof repos.$inferSelect;
 

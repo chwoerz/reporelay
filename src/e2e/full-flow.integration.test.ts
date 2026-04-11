@@ -40,7 +40,6 @@ import { createMockEmbedder } from "../../test/setup/mock-embedder.js";
 import type { FastifyInstance } from "fastify";
 import type { PgBoss } from "pg-boss";
 
-
 const silentLogger = pino({ level: "silent" });
 
 /**
@@ -67,7 +66,6 @@ async function pollRefStatus(
   );
   return found!;
 }
-
 
 describe("End-to-end: API → pg-boss → worker → pipeline (integration)", () => {
   let db: Db;
@@ -131,8 +129,8 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     await stopPostgres();
   });
 
-    // Flow 1: Full index via API → queue → worker → ready
-  
+  // Flow 1: Full index via API → queue → worker → ready
+
   describe("full index: API → queue → worker → pipeline → ready", () => {
     it("registers a repo via POST /api/repos (returns immediately, mirror clones async)", async () => {
       const res = await app.inject({
@@ -231,9 +229,9 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     });
   });
 
-    // Flow 2: Re-index same ref (branch) after new commits
+  // Flow 2: Re-index same ref (branch) after new commits
   //         → commitSha updates
-  
+
   describe("re-index same ref: commitSha updates after new commits", () => {
     let originalSha: string;
 
@@ -295,8 +293,8 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     });
   });
 
-    // Flow 3: Multiple versions coexist (v1.0.0 + v2.0.0)
-  
+  // Flow 3: Multiple versions coexist (v1.0.0 + v2.0.0)
+
   describe("multiple versions: v1.0.0 + v2.0.0 coexist", () => {
     it("adds a v2.0.0 commit with changes and tags it", async () => {
       await addCommitToTestRepo(
@@ -364,8 +362,8 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     });
   });
 
-    // Flow 4: Worker error handling — invalid repo path
-  
+  // Flow 4: Worker error handling — invalid repo path
+
   describe("error handling: invalid localPath", () => {
     const badRepoName = "bad-repo";
 
@@ -424,8 +422,8 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
     });
   });
 
-    // Flow 5: Delete a version and verify cleanup
-  
+  // Flow 5: Delete a version and verify cleanup
+
   describe("delete version: removes ref and data", () => {
     it("DELETE /api/repos/:name/versions/:ref removes v2.0.0", async () => {
       const res = await app.inject({

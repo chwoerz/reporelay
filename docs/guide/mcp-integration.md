@@ -71,7 +71,7 @@ Per-request `languages` values provided by the caller always take priority over 
 | :----------------------- | :------ | :--------------------------------------------------------- |
 | `REPORELAY_URL`          | —       | Remote RepoRelay MCP endpoint URL                          |
 | `MCP_LANGUAGES`          | —       | Comma-separated language override (skips auto-detection)   |
-| `MCP_LANGUAGE_THRESHOLD` | `10`    | Minimum language_stats % for repo filtering (0 = disabled) |
+| `MCP_LANGUAGE_THRESHOLD` | —       | Minimum language_stats % for repo filtering (0 = disabled) |
 | `LOG_LEVEL`              | `info`  | Log level                                                  |
 
 The `--server` CLI argument takes priority over `REPORELAY_URL`.
