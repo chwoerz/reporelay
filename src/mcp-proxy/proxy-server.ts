@@ -16,12 +16,12 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
-  ListToolsRequestSchema,
   CallToolRequestSchema,
-  ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
+  ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Logger } from "pino";
@@ -83,9 +83,9 @@ export function wireProxy(
   languages: string[] | undefined,
   languageThreshold: number | undefined,
 ): void {
-  server.setRequestHandler(ListToolsRequestSchema, async (request) => {
-    return client.listTools(request.params);
-  });
+  server.setRequestHandler(ListToolsRequestSchema, async (request) =>
+    client.listTools(request.params),
+  );
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -102,25 +102,25 @@ export function wireProxy(
     return result;
   });
 
-  server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
-    return client.listPrompts(request.params);
-  });
+  server.setRequestHandler(ListPromptsRequestSchema, async (request) =>
+    client.listPrompts(request.params),
+  );
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-    return client.getPrompt(request.params);
-  });
+  server.setRequestHandler(GetPromptRequestSchema, async (request) =>
+    client.getPrompt(request.params),
+  );
 
-  server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
-    return client.listResources(request.params);
-  });
+  server.setRequestHandler(ListResourcesRequestSchema, async (request) =>
+    client.listResources(request.params),
+  );
 
-  server.setRequestHandler(ListResourceTemplatesRequestSchema, async (request) => {
-    return client.listResourceTemplates(request.params);
-  });
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async (request) =>
+    client.listResourceTemplates(request.params),
+  );
 
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    return client.readResource(request.params);
-  });
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) =>
+    client.readResource(request.params),
+  );
 }
 
 /**
