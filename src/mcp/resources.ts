@@ -98,7 +98,7 @@ export function registerResources(server: McpServer, deps: McpDeps): void {
         return { contents: [{ uri: uri.href, text: `Not found: ${repoName}@${refStr}` }] };
       }
 
-      const paths = await listFilePaths(deps.db, resolved.ref.id, undefined);
+      const paths = await listFilePaths(deps.db, resolved.ref.id);
       const text = paths.length > 0 ? paths.join("\n") : "(no files)";
       return { contents: [{ uri: uri.href, text }] };
     },

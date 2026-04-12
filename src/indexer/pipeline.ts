@@ -439,12 +439,13 @@ async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
  *    (each batch runs in its own short transaction to avoid long-held locks)
  * 3. Embed all new chunks (outside transaction — can be slow)
  * 4. Update ref status to "ready" with language stats (only after embeddings are persisted)
+ * @return all indexed files
  */
 export async function runPipeline(
   opts: PipelineOptions,
   input: PipelineInput,
   onProgress?: PipelineProgressCallback,
-): Promise<void> {
+): Promise<Set<string>> {
   const {
     db,
     embedder,
@@ -456,6 +457,7 @@ export async function runPipeline(
   const { worktreePath, repoRefId, files } = input;
 
   const filesToProcess = await filterSupportedFiles(worktreePath, files);
+  const filePaths = filesToProcess.map((f) => f.path);
   const newChunkRows: NewChunkRow[] = [];
   let processed = 0;
 
@@ -533,4 +535,5 @@ export async function runPipeline(
     indexedAt: new Date(),
     languageStats,
   });
+  return new Set(filePaths);
 }

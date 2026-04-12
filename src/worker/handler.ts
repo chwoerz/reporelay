@@ -12,10 +12,14 @@
  */
 import * as semver from "semver";
 import { eq } from "drizzle-orm";
-import type { Db } from "../storage/index.js";
-import { repoRefs } from "../storage/index.js";
-import { RepoRepository } from "../storage/index.js";
-import { RepoRefRepository, type ProgressUpdate } from "../storage/index.js";
+import {
+  Db,
+  type ProgressUpdate,
+  RefFileRepository,
+  RepoRefRepository,
+  repoRefs,
+  RepoRepository,
+} from "../storage/index.js";
 import {
   checkoutWorktree,
   cleanupWorktree,
@@ -23,7 +27,7 @@ import {
   resolveCommitSha,
   syncMirror,
 } from "../git/git-sync.js";
-import { runPipeline, PipelineCancelledError } from "../indexer/pipeline.js";
+import { PipelineCancelledError, runPipeline } from "../indexer/pipeline.js";
 import type { Embedder } from "../indexer/embedder.js";
 import type { IndexJob } from "../core/types.js";
 import type { Config } from "../core/config.js";
@@ -263,6 +267,7 @@ function pipelineProgressCallback(
 export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<void> {
   const { db, embedder, config, logger } = deps;
   const refRepo = new RepoRefRepository(db);
+  const refFiles = new RefFileRepository(db);
 
   let mirrorPath: string | undefined;
   let worktreePath: string | undefined;
@@ -334,12 +339,21 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
       filesTotal: files.length,
     });
 
-    await runPipeline(
+    const indexedFilePaths = await runPipeline(
       { db, embedder, embeddingBatchSize: config.EMBEDDING_BATCH_SIZE },
       { worktreePath, repoRefId, files },
       pipelineProgressCallback(refRepo, repoRefId, logger, job),
     );
+    const isSameRefNameAndDifferentSha = existingRef && existingRef.commitSha !== sync.commitSha;
 
+    if (isSameRefNameAndDifferentSha) {
+      const allFilesForRef = await refFiles.findByRepoRef(repoRefId);
+      const fileIdsToDelete: number[] = allFilesForRef
+        .filter((fileForRef) => !indexedFilePaths.has(fileForRef.path))
+        .map((f) => f.id);
+
+      await refFiles.deleteForRepoRefAndInList(repoRefId, fileIdsToDelete);
+    }
     // Pipeline's finalizing step already sets stage to "ready" in the DB
     // (via refRepo.updateWhere in pipeline.ts), so just log success.
     logger.info({ repo: job.repo, ref: job.ref, commitSha: sync.commitSha }, "Indexing complete");

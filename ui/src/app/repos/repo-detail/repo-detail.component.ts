@@ -172,11 +172,10 @@ export class RepoDetailComponent {
     });
   }
 
-  sync(event: Event) {
+  sync(event: Event, ref: string) {
     event.preventDefault();
     this.message.set("");
     const name = this.routeName();
-    const ref = this.syncRef();
 
     this.http.post(`/api/repos/${name}/sync`, { ref }).subscribe({
       next: () => {

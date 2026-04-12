@@ -13,6 +13,8 @@ const mockFindByName = vi.fn();
 const mockFindByRepoAndRef = vi.fn();
 const mockInsertOne = vi.fn().mockResolvedValue({ id: 42 });
 const mockUpdateWhere = vi.fn().mockResolvedValue(undefined);
+const mockRefFileFindByRepoRef = vi.fn().mockResolvedValue([]);
+const mockDeleteForRepoRefAndInList = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../storage/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../storage/index.js")>();
@@ -26,6 +28,10 @@ vi.mock("../storage/index.js", async (importOriginal) => {
       insertOne: mockInsertOne,
       updateWhere: mockUpdateWhere,
       updateProgress: mockUpdateProgress,
+    })),
+    RefFileRepository: vi.fn().mockImplementation(() => ({
+      findByRepoRef: mockRefFileFindByRepoRef,
+      deleteForRepoRefAndInList: mockDeleteForRepoRefAndInList,
     })),
   };
 });
@@ -199,5 +205,87 @@ describe("handleIndexJob", () => {
       stage: "syncing",
       stageMessage: expect.stringContaining("Cloning/fetching mirror"),
     });
+  });
+
+  describe("stale file cleanup on re-index (different SHA)", () => {
+    beforeEach(() => {
+      // Existing ref has a *different* commitSha than the newly resolved "abc123"
+      mockFindByRepoAndRef.mockResolvedValue({
+        id: 42,
+        ref: "main",
+        stage: "queued",
+        commitSha: "old-sha",
+      });
+    });
+
+    it("deletes files that were NOT re-indexed (stale from previous commit)", async () => {
+      const indexedPaths = new Set(["src/a.ts", "src/b.ts"]);
+      mockRunPipeline.mockResolvedValueOnce(indexedPaths);
+
+      mockRefFileFindByRepoRef.mockResolvedValueOnce([
+        { id: 10, path: "src/a.ts" },
+        { id: 11, path: "src/b.ts" },
+        { id: 12, path: "src/removed.ts" },
+      ]);
+
+      await handleIndexJob(job, fakeDeps);
+
+      expect(mockRefFileFindByRepoRef).toHaveBeenCalledWith(42);
+      // Only id 12 is stale — its path is NOT in indexedPaths
+      expect(mockDeleteForRepoRefAndInList).toHaveBeenCalledWith(42, [12]);
+    });
+
+    it("keeps all files when every path was re-indexed", async () => {
+      const indexedPaths = new Set(["src/a.ts", "src/b.ts"]);
+      mockRunPipeline.mockResolvedValueOnce(indexedPaths);
+
+      mockRefFileFindByRepoRef.mockResolvedValueOnce([
+        { id: 10, path: "src/a.ts" },
+        { id: 11, path: "src/b.ts" },
+      ]);
+
+      await handleIndexJob(job, fakeDeps);
+
+      expect(mockDeleteForRepoRefAndInList).toHaveBeenCalledWith(42, []);
+    });
+
+    it("deletes all files when none were re-indexed", async () => {
+      const indexedPaths = new Set(["src/new-file.ts"]);
+      mockRunPipeline.mockResolvedValueOnce(indexedPaths);
+
+      mockRefFileFindByRepoRef.mockResolvedValueOnce([
+        { id: 10, path: "src/old-a.ts" },
+        { id: 11, path: "src/old-b.ts" },
+      ]);
+
+      await handleIndexJob(job, fakeDeps);
+
+      expect(mockDeleteForRepoRefAndInList).toHaveBeenCalledWith(42, [10, 11]);
+    });
+  });
+
+  it("does not delete stale files when commit SHA is unchanged", async () => {
+    // Existing ref already at the same SHA → skip re-index entirely
+    mockFindByRepoAndRef.mockResolvedValue({
+      id: 42,
+      ref: "main",
+      stage: "ready",
+      commitSha: "abc123",
+    });
+
+    await handleIndexJob(job, fakeDeps);
+
+    expect(mockRunPipeline).not.toHaveBeenCalled();
+    expect(mockDeleteForRepoRefAndInList).not.toHaveBeenCalled();
+  });
+
+  it("does not attempt stale file cleanup for a brand-new ref", async () => {
+    // No existing ref → insertOne path (no previous commit to diff against)
+    mockFindByRepoAndRef.mockResolvedValue(null);
+    mockRunPipeline.mockResolvedValueOnce(new Set(["src/a.ts"]));
+
+    await handleIndexJob(job, fakeDeps);
+
+    expect(mockDeleteForRepoRefAndInList).not.toHaveBeenCalled();
   });
 });

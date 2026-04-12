@@ -43,6 +43,10 @@ export class RefFileRepository extends BaseRepository<typeof refFiles> {
     return row as RefFileSelect;
   }
 
+  async deleteForRepoRefAndInList(repoRefId: number, ids: number[]) {
+    return this.deleteWhere(and(eq(refFiles.repoRefId, repoRefId), inArray(refFiles.id, ids))!);
+  }
+
   async findByRepoRef(repoRefId: number): Promise<RefFileSelect[]> {
     return this.findAll(eq(refFiles.repoRefId, repoRefId));
   }

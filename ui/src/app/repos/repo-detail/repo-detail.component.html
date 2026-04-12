@@ -73,7 +73,7 @@
   } @else if (r.mirrorStatus === 'error') {
     <p class="error">Mirror sync failed: {{ r.mirrorError }}</p>
   } @else {
-    <form (submit)="sync($event)" class="sync-form">
+    <form (submit)="sync($event, this.syncRef())" class="sync-form">
       @if (gitRefs.value(); as refs) {
         <app-ref-picker
           [gitRefs]="refs"
@@ -106,7 +106,7 @@
 
   <!-- Progress cards for refs being synced that haven't appeared in the table yet -->
   @for (p of pendingProgress(); track p.ref) {
-    <app-progress-card [progress]="p" [showRefName]="true" [pending]="true" />
+    <app-progress-card [progress]="p" [showRefName]="true" [pending]="true"/>
   }
 
   @if (r.refs.length === 0 && pendingProgress().length === 0) {
@@ -114,13 +114,13 @@
   } @else if (r.refs.length > 0) {
     <table class="data-table refs-table">
       <thead>
-        <tr>
-          <th>Ref</th>
-          <th>Stage</th>
-          <th>Commit</th>
-          <th>Actions</th>
-          <th></th>
-        </tr>
+      <tr>
+        <th>Ref</th>
+        <th>Stage</th>
+        <th>Commit</th>
+        <th>Actions</th>
+        <th></th>
+      </tr>
       </thead>
       <tbody>
         @for (ref of r.refs; track ref.ref) {
@@ -142,12 +142,15 @@
               <button class="btn-icon warn" (click)="deleteRef(ref.ref)" aria-label="Delete ref">
                 <span class="mi">delete</span>
               </button>
+              <button class="btn-icon" title="Refresh" (click)="sync($event, ref.ref)">
+                <span class="mi">sync</span>
+              </button>
             </td>
           </tr>
           @if (ref.stage !== 'ready' && progressFor(ref.ref); as p) {
             <tr class="progress-detail-row">
               <td colspan="5" class="progress-detail-cell">
-                <app-progress-card [progress]="p" />
+                <app-progress-card [progress]="p"/>
               </td>
             </tr>
           }
