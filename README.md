@@ -22,7 +22,7 @@
 
 ---
 
-**RepoRelay** is a self-hosted code context engine for [MCP](https://modelcontextprotocol.io).
+**RepoRelay** is a self-hosted code context engine for [MCP](https://modelcontextprotocol.io). ***ALPHA VERSION***
 
 1. [**Add repositories**](https://chwoerz.github.io/reporelay/guide/getting-started) from any source — GitHub, GitLab, Bitbucket, on-premise, or local disk
 2. [**Index the refs you need**](https://chwoerz.github.io/reporelay/guide/indexing-pipeline) — pick the branches and tags that matter; each gets its own versioned snapshot
