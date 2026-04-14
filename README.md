@@ -1,4 +1,7 @@
 <p align="center">
+<h1 align="center">ALPHA VERSION</h1>
+</p>
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo/logo-text-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="assets/logo/logo-text-light.png">
@@ -22,7 +25,7 @@
 
 ---
 
-**RepoRelay** is a self-hosted code context engine for [MCP](https://modelcontextprotocol.io). ***ALPHA VERSION***
+**RepoRelay** is a self-hosted code context engine for [MCP](https://modelcontextprotocol.io).
 
 1. [**Add repositories**](https://chwoerz.github.io/reporelay/guide/getting-started) from any source — GitHub, GitLab, Bitbucket, on-premise, or local disk
 2. [**Index the refs you need**](https://chwoerz.github.io/reporelay/guide/indexing-pipeline) — pick the branches and tags that matter; each gets its own versioned snapshot
