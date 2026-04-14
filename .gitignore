@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+PLAN.md
 .env.local
 .env.*.local
 .reporelay/
