@@ -1,6 +1,6 @@
 {
   "name": "reporelay",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Local MCP proxy for RepoRelay — auto-detects project languages and forwards requests to a remote RepoRelay server.",
   "type": "module",
   "main": "dist/main.js",

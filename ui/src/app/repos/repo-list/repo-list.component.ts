@@ -1,9 +1,10 @@
-import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
-import { HttpClient, httpResource } from "@angular/common/http";
-import { RouterLink } from "@angular/router";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { catchError, interval, map, of, switchMap, tap } from "rxjs";
-import type { IndexingProgress, Repo } from "../../types";
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, interval, map, of, switchMap, tap } from 'rxjs';
+import type { IndexingProgress, Repo } from '../../types';
+import { CreateRepoBody } from '@api/CreateRepoBody';
 
 @Component({
   selector: "app-repo-list",
@@ -16,8 +17,8 @@ export class RepoListComponent {
   private destroyRef = inject(DestroyRef);
 
   name = signal("");
-  localPath = signal("");
-  remoteUrl = signal("");
+  gitPath = signal("");
+  pathPlaceholder = computed(() => this.sourceType() === "local" ? "Path to local repo" : "Git URL, e.g. https://github.com/org/repo.git")
   sourceType = signal<"local" | "remote">("local");
   error = signal("");
 
@@ -37,10 +38,10 @@ export class RepoListComponent {
    * Returns 'ok' | 'missing' | null (null = no valid URL typed yet).
    */
   remoteUrlTokenStatus = computed<"ok" | "missing" | null>(() => {
-    const url = this.remoteUrl();
-    if (!url || !url.includes("://")) return null;
+    const gitPath = this.gitPath();
+    if (!gitPath || !gitPath.includes("://")) return null;
     try {
-      const host = new URL(url).hostname.toLowerCase();
+      const host = new URL(gitPath).hostname.toLowerCase();
       if (!host) return null;
       const suffix = host.replace(/[.\-]/g, "_").toUpperCase();
       const hosts = this.configuredHosts.value();
@@ -51,12 +52,7 @@ export class RepoListComponent {
     }
   });
 
-  canSubmit = computed(() => {
-    if (!this.name()) return false;
-    if (this.sourceType() === "local" && !this.localPath()) return false;
-    if (this.sourceType() === "remote" && !this.remoteUrl()) return false;
-    return true;
-  });
+  canSubmit = computed(() => this.name() && this.gitPath());
 
   /** True when any repo is currently cloning its mirror. */
   hasCloning = computed(() => {
@@ -65,6 +61,16 @@ export class RepoListComponent {
   });
 
   constructor() {
+
+    effect(() => {
+      const gitPath = this.gitPath();
+      const name = this.name();
+      const hasDotGit = gitPath?.endsWith(".git");
+      if(gitPath && hasDotGit && !name) {
+        const repoName = gitPath.split("/").at(-1)?.replace(".git", "") ?? "";
+        this.name.set(repoName);
+      }
+    })
     // Poll indexing-status every 2s and map to per-repo progress.
     // Also reload the repos list when any repo is cloning or when
     // an indexing job just finished.
@@ -132,24 +138,15 @@ export class RepoListComponent {
     return (event.target as HTMLInputElement).value;
   }
 
-  selectSource(type: "local" | "remote") {
-    this.sourceType.set(type);
-    if (type === "local") {
-      this.remoteUrl.set("");
-    } else {
-      this.localPath.set("");
-    }
-  }
 
   addRepo(event: Event) {
     event.preventDefault();
     this.error.set("");
-
-    const body: Record<string, string> = { name: this.name() };
+    const body: CreateRepoBody = { name: this.name() };
     if (this.sourceType() === "local") {
-      body["localPath"] = this.localPath();
+      body.localPath = this.gitPath();
     } else {
-      body["remoteUrl"] = this.remoteUrl();
+      body.remoteUrl = this.gitPath();
     }
 
     this.adding.set(true);
@@ -158,8 +155,7 @@ export class RepoListComponent {
       next: () => {
         this.adding.set(false);
         this.name.set("");
-        this.localPath.set("");
-        this.remoteUrl.set("");
+        this.gitPath.set("");
         // Reload the list — the new repo will appear with mirrorStatus 'cloning'.
         // The polling loop will keep refreshing until the clone completes.
         this.repos.reload();
@@ -178,7 +174,4 @@ export class RepoListComponent {
     });
   }
 
-  trackByName(_index: number, repo: Repo): string {
-    return repo.name;
-  }
 }

@@ -31,48 +31,39 @@
         type="button"
         class="source-tab"
         [class.active]="sourceType() === 'local'"
-        (click)="selectSource('local')"
-      >
+        (click)="sourceType.set('local')">
         <span class="mi">folder_open</span> Local
       </button>
       <button
         type="button"
         class="source-tab"
         [class.active]="sourceType() === 'remote'"
-        (click)="selectSource('remote')"
+        (click)="sourceType.set('remote')"
       >
         <span class="mi">cloud_download</span> Remote
       </button>
     </div>
 
-    @if (sourceType() === 'local') {
-      <input
-        class="input source-field"
-        placeholder="Path on disk, e.g. /home/user/project"
-        [value]="localPath()"
-        (input)="localPath.set(asValue($event))"
-        required
-      />
-    }
 
-    @if (sourceType() === 'remote') {
-      <input
-        class="input source-field"
-        placeholder="Git URL, e.g. https://github.com/org/repo.git"
-        [value]="remoteUrl()"
-        (input)="remoteUrl.set(asValue($event))"
-        required
-      />
-      @if (remoteUrlTokenStatus(); as status) {
-        <span class="url-token-hint" [class.ok]="status === 'ok'" [class.missing]="status === 'missing'">
+    <input
+      class="input source-field"
+      [placeholder]="pathPlaceholder()"
+      [value]="gitPath()"
+      (input)="gitPath.set(asValue($event))"
+      required
+    />
+
+
+    @if (remoteUrlTokenStatus(); as status) {
+      <span class="url-token-hint" [class.ok]="status === 'ok'" [class.missing]="status === 'missing'">
           @if (status === 'ok') {
             <span class="mi url-token-icon">vpn_key</span> Token found
           } @else {
             <span class="mi url-token-icon">vpn_key_off</span> No token for this host
           }
         </span>
-      }
     }
+
   </div>
 </form>
 
@@ -93,12 +84,12 @@
   } @else {
     <table class="data-table repo-table">
       <thead>
-        <tr>
-          <th>Name</th>
-          <th>Source</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
+      <tr>
+        <th>Name</th>
+        <th>Source</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
       </thead>
       <tbody>
         @for (repo of list; track repo.name) {
@@ -112,7 +103,8 @@
                 @if (repo.tokenConfigured) {
                   <span class="mi token-icon token-ok" title="Authentication token configured">vpn_key</span>
                 } @else {
-                  <span class="mi token-icon token-missing" title="No authentication token — set GIT_TOKEN_&lt;HOST&gt; in .env">vpn_key_off</span>
+                  <span class="mi token-icon token-missing"
+                        title="No authentication token — set GIT_TOKEN_&lt;HOST&gt; in .env">vpn_key_off</span>
                 }
               }
               <span class="source-text">{{ repo.localPath || repo.remoteUrl || '—' }}</span>

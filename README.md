@@ -87,7 +87,8 @@ cd reporelay
 cp .env.example .env
 ```
 
-Edit `.env` if you need to change the embedding model or Git tokens for private repos. The defaults work out of the box if you have [Ollama](https://ollama.com/) running locally.
+Edit `.env` if you need to change the embedding model or Git tokens for private repos. The defaults work out of the 
+box if you have [Ollama](https://ollama.com/) running locally with `nomic-embed-text` as a model.
 
 #### 2. Start everything
 
