@@ -35,6 +35,16 @@ Manage everything through the [REST API](https://chwoerz.github.io/reporelay/ref
 
 ---
 
+## Demo
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=LBRttRAcL3w">
+    <img src="https://img.youtube.com/vi/LBRttRAcL3w/maxresdefault.jpg" alt="RepoRelay demo" width="640">
+  </a>
+</p>
+
+---
+
 ## Highlights
 
 |             | Feature                                             | Description                                                                                     |

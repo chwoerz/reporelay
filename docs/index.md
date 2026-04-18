@@ -49,3 +49,11 @@ features:
     title: Symbol-Aware Chunking
     details: Intelligent splitting that respects function boundaries with overlap windows — never cuts a symbol in half.
 ---
+
+## Demo
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=LBRttRAcL3w">
+    <img src="https://img.youtube.com/vi/LBRttRAcL3w/maxresdefault.jpg" alt="RepoRelay demo" width="720">
+  </a>
+</p>
