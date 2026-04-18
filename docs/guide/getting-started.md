@@ -60,7 +60,7 @@ curl -sS -X POST http://localhost:3001/api/repos/my-lib/sync \
   -d '{"ref":"v2.0.0"}'
 
 # Search across all indexed repos and versions
-curl -sS 'http://localhost:3001/api/search?q=handleAuth'
+curl -sS 'http://localhost:3001/api/search?query=handleAuth'
 ```
 
 Or use the admin dashboard at `http://localhost` and the Swagger UI at `http://localhost:3001/docs`.
