@@ -102,7 +102,7 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<BootstrapR
   await embedder.init();
 
   if (embedder.initError) {
-    logger.warn(
+    logger.error(
       {
         error: embedder.initError,
         provider: config.EMBEDDING_PROVIDER,
