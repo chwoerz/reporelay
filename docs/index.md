@@ -39,7 +39,7 @@ features:
     details: Every ref indexes all files via git ls-tree. SHA-256 content addressing skips unchanged files — fast, correct, order-independent.
   - icon: 📦
     title: Self-Hosted
-    details: Your code stays on your infrastructure. Postgres is the only runtime dependency. Private repos authenticate via env-var tokens.
+    details: RepoRelay runs on your infrastructure — no third-party indexing service, no telemetry. Code only leaves your network via providers you configure. The LLM connected via MCP, and your embedding provider (use local Ollama to keep everything on-box).
   - icon: 🌐
     title: Language Auto-Detection
     details: The MCP proxy detects your project's languages from manifest files and automatically filters results to relevant repos.

@@ -67,7 +67,7 @@ Claude didn't guess — it searched your actual indexed code via RepoRelay's MCP
 
 ## Key Differentiators
 
-- **Self-hosted**: Your code never leaves your infrastructure. No cloud API calls for indexing.
+- **Self-hosted**: RepoRelay runs entirely on your infrastructure — no third-party indexing service, no telemetry, no repo uploads. Code only leaves your network via the providers you explicitly configure: snippets requested by the LLM you connect via MCP (e.g. Claude, GPT), and chunks sent to your embedding provider during indexing. Cloud embedding providers like OpenAI will see the indexed code; a local Ollama setup keeps everything on-box.
 - **MCP-native**: Not a custom integration — works with any MCP-capable client out of the box.
 - **Version-aware**: Index multiple branches and tags. Query with semver constraints like `^1.2` or `~2.0`.
 - **Content-addressable**: SHA-256 dedup means identical files across branches share parsed symbols, chunks, and embeddings automatically.

@@ -31,7 +31,9 @@
 2. [**Index the refs you need**](https://chwoerz.github.io/reporelay/guide/indexing-pipeline) — pick the branches and tags that matter; each gets its own versioned snapshot
 3. [**Use them everywhere**](https://chwoerz.github.io/reporelay/guide/mcp-integration) — every indexed repo is instantly available as MCP tools in Claude Desktop, Cursor, Windsurf, OpenCode, or any other MCP-capable client
 
-Manage everything through the [REST API](https://chwoerz.github.io/reporelay/reference/api) or the [admin dashboard](https://chwoerz.github.io/reporelay/guide/admin-dashboard). Register once, query from any project in any editor. RepoRelay parses files with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), extracts symbols and imports, and stores everything in a hybrid search index (BM25 + pgvector). Private repos never leave your infrastructure.
+Manage everything through the [REST API](https://chwoerz.github.io/reporelay/reference/api) or the [admin dashboard](https://chwoerz.github.io/reporelay/guide/admin-dashboard). Register once, query from any project in any editor. RepoRelay parses files with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), extracts symbols and imports, and stores everything in a hybrid search index (BM25 + pgvector).
+
+RepoRelay runs entirely on your infrastructure — no third-party indexing service, no telemetry, no repo uploads. Code only leaves your network via the providers you explicitly configure: snippets requested by the LLM you connect via MCP (e.g. Claude, GPT), and chunks sent to your embedding provider during indexing (cloud providers like OpenAI see the code; a local Ollama setup keeps everything on-box).
 
 ---
 
