@@ -310,40 +310,56 @@ export function truncateForEmbedding(text: string, maxTokens = MAX_EMBED_TOKENS)
  * @param embedder - The embedder provider to use
  * @param texts - All texts to embed
  * @param batchSize - Max texts per batch (default: 64)
+ * @param concurrency - Max in-flight batches. Default 1 (sequential). Raise to
+ *   dispatch multiple batches in parallel — bounded by the provider's parallel
+ *   slot count (e.g. Ollama's OLLAMA_NUM_PARALLEL, default 4).
  * @returns {@link EmbedBatchResult} — embeddings (or null) + failures
  */
 export async function embedInBatches(
   embedder: Embedder,
   texts: string[],
   batchSize = 64,
+  concurrency = 1,
 ): Promise<EmbedBatchResult> {
   if (texts.length === 0) return { embeddings: [], failures: [] };
 
   // Truncate any texts exceeding the model's context window
   const safeTexts = texts.map((t) => truncateForEmbedding(t));
 
-  const embeddings: (number[] | null)[] = [];
+  // Pre-allocate so parallel batches can write at their correct offsets
+  // without having to coordinate on array order.
+  const embeddings: (number[] | null)[] = new Array(safeTexts.length).fill(null);
   const failures: EmbeddingFailure[] = [];
 
-  for (let i = 0; i < safeTexts.length; i += batchSize) {
-    const batch = safeTexts.slice(i, i + batchSize);
+  const runBatch = async (start: number): Promise<void> => {
+    const batch = safeTexts.slice(start, start + batchSize);
     try {
       const batchEmbeddings = await embedder.embed(batch);
-      embeddings.push(...batchEmbeddings);
+      for (let k = 0; k < batchEmbeddings.length; k++) {
+        embeddings[start + k] = batchEmbeddings[k]!;
+      }
     } catch {
       // Batch failed — fall back to embedding each text individually in parallel.
       const settled = await Promise.allSettled(batch.map((text) => embedder.embed([text])));
       for (const [j, result] of settled.entries()) {
         if (result.status === "fulfilled") {
-          embeddings.push(result.value[0]!);
+          embeddings[start + j] = result.value[0]!;
         } else {
           const msg =
             result.reason instanceof Error ? result.reason.message : String(result.reason);
-          embeddings.push(null);
-          failures.push({ index: i + j, error: msg });
+          embeddings[start + j] = null;
+          failures.push({ index: start + j, error: msg });
         }
       }
     }
+  };
+
+  // Collect batch start offsets, then dispatch in waves of `concurrency`.
+  const starts: number[] = [];
+  for (let i = 0; i < safeTexts.length; i += batchSize) starts.push(i);
+  for (let w = 0; w < starts.length; w += concurrency) {
+    const wave = starts.slice(w, w + concurrency);
+    await Promise.all(wave.map(runBatch));
   }
 
   return { embeddings, failures };

@@ -43,6 +43,23 @@ export class RefFileRepository extends BaseRepository<typeof refFiles> {
     return row as RefFileSelect;
   }
 
+  /**
+   * Bulk upsert: insert multiple (repoRefId, path, fileContentId) rows,
+   * updating fileContentId on conflict. One round-trip instead of N.
+   */
+  async upsertManyByRefAndPath(
+    rows: { repoRefId: number; fileContentId: number; path: string }[],
+  ): Promise<void> {
+    if (rows.length === 0) return;
+    await this.db
+      .insert(refFiles)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [refFiles.repoRefId, refFiles.path],
+        set: { fileContentId: sql`excluded.file_content_id` },
+      });
+  }
+
   async deleteForRepoRefAndInList(repoRefId: number, ids: number[]) {
     return this.deleteWhere(and(eq(refFiles.repoRefId, repoRefId), inArray(refFiles.id, ids))!);
   }

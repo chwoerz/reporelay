@@ -12,6 +12,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `EMBEDDING_MODEL`        | `nomic-embed-text`                                          | Embedding model name                                          |
 | `EMBEDDING_DIMENSIONS`   | —                                                           | Dimension override (e.g. `768` for OpenAI text-embedding-3)   |
 | `EMBEDDING_BATCH_SIZE`   | `64`                                                        | Batch size for embedding requests                             |
+| `EMBEDDING_CONCURRENCY`  | `4`                                                         | In-flight embedding batches (match provider's parallel slots) |
 | `OPENAI_API_KEY`         | —                                                           | API key (required when `EMBEDDING_PROVIDER=openai`)           |
 | `MCP_SERVER_PORT`        | `3000`                                                      | MCP HTTP server port                                          |
 | `MCP_LANGUAGES`          | —                                                           | Comma-separated language filter (skips auto-detection)        |

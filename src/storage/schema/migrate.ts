@@ -42,4 +42,13 @@ export async function runMigrations(sql: Sql): Promise<void> {
     USING bm25 (id, (content::pdb.source_code))
     WITH (key_field='id')
   `;
+
+  // Index on the FK column used by the orphan-cleanup anti-join
+  // (DELETE FROM file_contents WHERE NOT EXISTS ...). Postgres does not
+  // auto-index child-side FK columns; without this, the cleanup does a
+  // sequential scan of ref_files per batch and can run for hours.
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_ref_files_file_content_id
+    ON ref_files (file_content_id)
+  `;
 }

@@ -218,6 +218,28 @@ function pipelineProgressCallback(
           "File processing error (continuing)",
         );
         break;
+      case "dedup-summary": {
+        const totalFiles = event.filesNew + event.filesReused;
+        const totalChunks = event.chunksNew + event.chunksRepair;
+        logger.info(
+          {
+            repo: job.repo,
+            ref: job.ref,
+            filesNew: event.filesNew,
+            filesReused: event.filesReused,
+            chunksNew: event.chunksNew,
+            chunksRepair: event.chunksRepair,
+          },
+          `Dedup: ${event.filesReused}/${totalFiles} files reused from existing content; ` +
+            `${event.chunksNew} new chunks to embed, ${event.chunksRepair} pre-existing chunks to repair (previously unembedded)`,
+        );
+        update({
+          stageMessage:
+            `Dedup: ${event.filesReused}/${totalFiles} files reused · ` +
+            `${totalChunks} chunk(s) to embed (${event.chunksNew} new, ${event.chunksRepair} repair)`,
+        });
+        break;
+      }
       case "embedding-start":
         update({
           stage: "embedding",
@@ -340,7 +362,12 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
     });
 
     const indexedFilePaths = await runPipeline(
-      { db, embedder, embeddingBatchSize: config.EMBEDDING_BATCH_SIZE },
+      {
+        db,
+        embedder,
+        embeddingBatchSize: config.EMBEDDING_BATCH_SIZE,
+        embeddingConcurrency: config.EMBEDDING_CONCURRENCY,
+      },
       { worktreePath, repoRefId, files },
       pipelineProgressCallback(refRepo, repoRefId, logger, job),
     );

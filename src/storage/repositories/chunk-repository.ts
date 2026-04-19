@@ -1,7 +1,7 @@
 /**
  * Repository for the `chunks` table.
  */
-import { eq, isNull, isNotNull, and } from "drizzle-orm";
+import { eq, inArray, isNull, isNotNull, and } from "drizzle-orm";
 import { FileContentBaseRepository } from "./base-repository.js";
 import { chunks } from "../schema/schema.js";
 import type { Db } from "../schema/db.js";
@@ -39,6 +39,19 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
         ),
       );
     });
+  }
+
+  /**
+   * Find chunks without embeddings across a set of file_contents in one query.
+   * Used by the pipeline to resurrect chunks from a previous crashed run.
+   */
+  async findUnembeddedByFileContentIds(
+    fileContentIds: number[],
+  ): Promise<(typeof chunks.$inferSelect)[]> {
+    if (fileContentIds.length === 0) return [];
+    return this.findAll(
+      and(inArray(chunks.fileContentId, fileContentIds), isNull(chunks.embedding))!,
+    );
   }
 
   /**
