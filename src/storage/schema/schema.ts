@@ -107,6 +107,13 @@ export const chunks = pgTable(
       onDelete: "set null",
     }),
     content: text("content").notNull(),
+    /**
+     * SHA-256 of `content`. Used to reuse embeddings for byte-identical
+     * chunks across files/refs — avoids re-embedding unchanged code when
+     * a file's file-level hash changes (e.g. a small edit higher up).
+     * Nullable for rows predating the column; backfilled on startup.
+     */
+    contentSha256: text("content_sha256"),
     startLine: integer("start_line").notNull(),
     endLine: integer("end_line").notNull(),
     embedding: vector("embedding", { dimensions: 768 }),

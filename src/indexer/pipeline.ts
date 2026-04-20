@@ -91,6 +91,12 @@ export type PipelineProgressEvent =
   | { type: "embedding-start"; chunksTotal: number }
   | { type: "embedding-batch-done"; chunksEmbedded: number; chunksTotal: number }
   | { type: "embedding-failures"; failures: { chunkId: number; filePath: string; error: string }[] }
+  /**
+   * Emitted once after chunk-level cache lookup, before embedding starts.
+   * Shows how many chunks reused an embedding from an identical chunk
+   * (by content sha256) vs. how many still need the embedding provider.
+   */
+  | { type: "chunk-cache"; chunksReused: number; chunksToEmbed: number }
   | { type: "finalizing" };
 
 export type PipelineProgressCallback = (event: PipelineProgressEvent) => void;
@@ -110,6 +116,8 @@ export type FileSkipReason = "too-large" | "minified-or-generated" | "read-error
 interface NewChunkRow {
   chunkId: number;
   content: string;
+  /** sha256 of content — used for chunk-level embedding cache lookup. */
+  contentSha256: string;
   /** Source file path — carried through so embedding failures can report which file. */
   filePath: string;
 }
@@ -367,11 +375,13 @@ async function persistBatch(
   if (allImportRows.length > 0) await repos.imp.insertMany(allImportRows);
 
   // 7. Bulk-insert chunks for all new files, carrying through the content + path
-  //    so embedding failures can be attributed later.
+  //    so embedding failures can be attributed later. `content_sha256` enables
+  //    chunk-level embedding reuse across files/refs (see embedNewChunks).
   const chunkInsertPayload: {
     fileContentId: number;
     symbolId: number | null;
     content: string;
+    contentSha256: string;
     startLine: number;
     endLine: number;
   }[] = [];
@@ -384,6 +394,7 @@ async function persistBatch(
         fileContentId: fcId,
         symbolId: resolveSymbolId(symMap, co),
         content: co.content,
+        contentSha256: sha256(co.content),
         startLine: co.startLine,
         endLine: co.endLine,
       });
@@ -394,12 +405,15 @@ async function persistBatch(
   const newChunks: NewChunkRow[] = insertedChunks.map((c, i) => ({
     chunkId: c.id,
     content: c.content,
+    contentSha256: c.contentSha256!,
     filePath: chunkMeta[i]!.filePath,
   }));
   const chunksNew = newChunks.length;
   let chunksRepair = 0;
 
   // 8. Self-repair: for existing FCs, re-embed any chunks missing an embedding.
+  //    These rows already have content_sha256 (backfill on startup); fall back
+  //    to hashing on-the-fly for rows predating the backfill.
   if (existingFcIds.size > 0) {
     const unembedded = await repos.chunk.findUnembeddedByFileContentIds([...existingFcIds]);
     chunksRepair = unembedded.length;
@@ -407,6 +421,7 @@ async function persistBatch(
       newChunks.push({
         chunkId: c.id,
         content: c.content,
+        contentSha256: c.contentSha256 ?? sha256(c.content),
         filePath: filePathByFcId.get(c.fileContentId) ?? "",
       });
     }
@@ -419,6 +434,51 @@ async function persistBatch(
     chunksNew,
     chunksRepair,
   };
+}
+
+/**
+ * Chunk-level embedding cache: for any chunk whose `content_sha256` already
+ * exists (with an embedding) on another chunk, copy the vector in-place and
+ * drop the chunk from the list passed to the embedding provider.
+ *
+ * This is the hot path when bumping a ref across versions — most functions
+ * don't change even when a file's overall sha does, so we avoid re-embedding
+ * the unchanged bulk. Returns the chunks that still need embedding.
+ */
+async function applyChunkEmbeddingCache(
+  chunkRepo: ChunkRepository,
+  newChunkRows: NewChunkRow[],
+  onProgress?: PipelineProgressCallback,
+): Promise<NewChunkRow[]> {
+  if (newChunkRows.length === 0) return newChunkRows;
+
+  const hashes = newChunkRows.map((r) => r.contentSha256);
+  const cache = await chunkRepo.findEmbeddingsByContentSha256(hashes);
+
+  const copies: { id: number; embedding: number[] }[] = [];
+  const remaining: NewChunkRow[] = [];
+  for (const row of newChunkRows) {
+    const hit = cache.get(row.contentSha256);
+    if (hit) {
+      copies.push({ id: row.chunkId, embedding: hit });
+    } else {
+      remaining.push(row);
+    }
+  }
+
+  if (copies.length > 0) {
+    await chunkRepo.updateEmbeddingsBatch(
+      copies.map(({ id, embedding }) => ({ id, embedding, embeddingError: null })),
+    );
+  }
+
+  onProgress?.({
+    type: "chunk-cache",
+    chunksReused: copies.length,
+    chunksToEmbed: remaining.length,
+  });
+
+  return remaining;
 }
 
 /** Embed all new chunks and persist the vectors (or record failures). */
@@ -617,10 +677,13 @@ export async function runPipeline(
     chunksRepair: totalChunksRepair,
   });
 
+  const chunkRepo = new ChunkRepository(db);
+  const toEmbed = await applyChunkEmbeddingCache(chunkRepo, newChunkRows, onProgress);
+
   await embedNewChunks({
     embedder,
-    chunkRepo: new ChunkRepository(db),
-    newChunkRows,
+    chunkRepo,
+    newChunkRows: toEmbed,
     batchSize: embeddingBatchSize,
     concurrency: embeddingConcurrency,
     onProgress,

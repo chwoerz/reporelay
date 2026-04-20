@@ -240,6 +240,22 @@ function pipelineProgressCallback(
         });
         break;
       }
+      case "chunk-cache": {
+        const total = event.chunksReused + event.chunksToEmbed;
+        logger.info(
+          {
+            repo: job.repo,
+            ref: job.ref,
+            chunksReused: event.chunksReused,
+            chunksToEmbed: event.chunksToEmbed,
+          },
+          `Chunk cache: ${event.chunksReused}/${total} chunks reused from existing embeddings; ${event.chunksToEmbed} to embed`,
+        );
+        update({
+          stageMessage: `Chunk cache: ${event.chunksReused}/${total} reused · ${event.chunksToEmbed} to embed`,
+        });
+        break;
+      }
       case "embedding-start":
         update({
           stage: "embedding",

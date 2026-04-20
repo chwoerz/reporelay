@@ -71,4 +71,34 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
     const rows = await this.findAll(isNull(chunks.embedding));
     return rows.length;
   }
+
+  /**
+   * Look up one embedding per unique `content_sha256` for cache reuse.
+   *
+   * Given a list of chunk-content hashes, returns `{hash → embedding}` for
+   * hashes that already have an embedded chunk anywhere in the DB. The
+   * partial index `idx_chunks_content_sha256` is filtered by
+   * `embedding IS NOT NULL`, so this is a fast index-only scan.
+   *
+   * Used by the pipeline to skip re-embedding byte-identical chunks — the
+   * common case when a file's file-level sha changes but most of its
+   * chunks (e.g. individual functions) are unchanged.
+   */
+  async findEmbeddingsByContentSha256(hashes: string[]): Promise<Map<string, number[]>> {
+    if (hashes.length === 0) return new Map();
+    const unique = [...new Set(hashes)];
+    const rows = await this.db
+      .select({ contentSha256: chunks.contentSha256, embedding: chunks.embedding })
+      .from(chunks)
+      .where(and(inArray(chunks.contentSha256, unique), isNotNull(chunks.embedding)));
+
+    // There may be many rows per hash; keep the first embedding seen.
+    const result = new Map<string, number[]>();
+    for (const row of rows) {
+      if (row.contentSha256 && row.embedding && !result.has(row.contentSha256)) {
+        result.set(row.contentSha256, row.embedding);
+      }
+    }
+    return result;
+  }
 }
