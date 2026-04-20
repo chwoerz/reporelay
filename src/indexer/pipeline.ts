@@ -24,7 +24,7 @@ import {
 import { buildIgnoreFilterFromRepo, classifyLanguage, filterIgnored } from "../git/index.js";
 import { parse } from "../parser/index.js";
 import { chunkFile, type ChunkOutput } from "./chunker.js";
-import { type Embedder, type EmbedBatchResult, embedInBatches } from "./embedder.js";
+import { type Embedder, embedInBatches } from "./embedder.js";
 import type { Language, LanguageStats, ParsedImport, ParsedSymbol } from "../core/types.js";
 
 /** Thrown when the pipeline detects that the ref was deleted mid-run. */
@@ -502,44 +502,34 @@ async function embedNewChunks(opts: {
   onProgress?.({ type: "embedding-start", chunksTotal: newChunkRows.length });
 
   const texts = newChunkRows.map((r) => r.content);
-  // Each wave fires up to `concurrency` in-flight batches in parallel.
-  // Cancellation is checked between waves; progress ticks once per wave.
-  const waveSize = batchSize * concurrency;
-  let embedded = 0;
-  const allResults: EmbedBatchResult = { embeddings: [], failures: [] };
-  for (let waveStart = 0; waveStart < texts.length; waveStart += waveSize) {
-    if (waveStart > 0) await assertRefExists(db, repoRefId);
-
-    const waveTexts = texts.slice(waveStart, waveStart + waveSize);
-    const waveResult = await embedInBatches(embedder, waveTexts, batchSize, concurrency);
-
-    allResults.embeddings.push(...waveResult.embeddings);
-    for (const f of waveResult.failures) {
-      allResults.failures.push({ index: waveStart + f.index, error: f.error });
-    }
-
-    embedded += waveTexts.length;
-    onProgress?.({
-      type: "embedding-batch-done",
-      chunksEmbedded: embedded,
-      chunksTotal: newChunkRows.length,
-    });
-  }
+  // embedInBatches runs waves internally; the onWaveDone hook lets us check
+  // for cancellation and tick progress after each wave without duplicating
+  // the wave loop here.
+  const results = await embedInBatches(
+    embedder,
+    texts,
+    batchSize,
+    concurrency,
+    async (completed, total) => {
+      await assertRefExists(db, repoRefId);
+      onProgress?.({ type: "embedding-batch-done", chunksEmbedded: completed, chunksTotal: total });
+    },
+  );
 
   // Build update list — `null` embeddings keep the column NULL and get an error reason
   const updates = newChunkRows.map((r, i) => {
-    const failure = allResults.failures.find((f) => f.index === i);
+    const failure = results.failures.find((f) => f.index === i);
     return {
       id: r.chunkId,
-      embedding: allResults.embeddings[i] ?? null,
+      embedding: results.embeddings[i] ?? null,
       embeddingError: failure?.error ?? null,
     };
   });
   await chunkRepo.updateEmbeddingsBatch(updates);
 
   // Notify callers about failures so they can log / surface them
-  if (allResults.failures.length > 0) {
-    const failedChunks = allResults.failures.map((f) => ({
+  if (results.failures.length > 0) {
+    const failedChunks = results.failures.map((f) => ({
       chunkId: newChunkRows[f.index]!.chunkId,
       filePath: newChunkRows[f.index]!.filePath,
       error: f.error,

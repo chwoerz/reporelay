@@ -198,56 +198,24 @@ function buildRepoJoins() {
 }
 
 /**
- * Build the BM25 retrieval subquery.
+ * Unified retrieval subquery used by both BM25 and vector branches.
  *
- * This branch:
- * - uses ParadeDB / pg_search full-text search
- * - applies repo/ref filters before top-k truncation
- * - ranks by pdb.score(c.id)
+ * Both branches share the same joins, metadata filtering, column list and
+ * ordering shape — they only differ in:
+ *  - the row ordering expression (`orderExpr`)
+ *  - the branch-specific predicate (`extraPredicate`)
+ *  - the rank column name (`rankAlias`)
  *
  * We query directly against the base table column `c.content`, because
  * pg_search / ParadeDB operators are safest and clearest when applied to
  * real indexed table columns rather than CTE aliases.
  */
-function buildBm25HitsCte(args: {
-  bm25Query: string;
-  metadataPredicate: ReturnType<typeof buildMetadataPredicate>;
-  fetchLimit: number;
-}) {
-  const { bm25Query, metadataPredicate, fetchLimit } = args;
-  const repoJoins = buildRepoJoins();
-
-  const whereClause = metadataPredicate
-    ? sql`WHERE ${metadataPredicate} AND c.content @@@ ${bm25Query}`
-    : sql`WHERE c.content @@@ ${bm25Query}`;
-
-  return sql`
-    SELECT
-      c.id AS chunk_id,
-      c.file_content_id,
-      c.content,
-      c.start_line,
-      c.end_line,
-      rf.path AS file_path,
-      r.name AS repo,
-      rr.ref AS ref,
-      ROW_NUMBER() OVER (
-        ORDER BY pdb.score(c.id) DESC, c.id ASC
-      ) AS bm25_rank
-    ${repoJoins}
-    ${whereClause}
-    ORDER BY pdb.score(c.id) DESC, c.id ASC
-    LIMIT ${fetchLimit}
-  `;
-}
-
 /**
- * Empty BM25 subquery used when the text query becomes empty.
- *
- * This preserves the CTE shape so the surrounding SQL stays simple while
- * effectively disabling the BM25 branch.
+ * Empty-shape CTE used when the BM25 branch is disabled (no query text).
+ * Preserves column shape for the outer FULL OUTER JOIN while avoiding any
+ * reference to `pdb.score`, which would error without a `@@@` match operator.
  */
-function buildEmptyBm25HitsCte() {
+function buildEmptyHitsCte(rankAlias: "bm25_rank" | "vector_rank") {
   return sql`
     SELECT
       NULL::bigint AS chunk_id,
@@ -258,32 +226,22 @@ function buildEmptyBm25HitsCte() {
       NULL::text AS file_path,
       NULL::text AS repo,
       NULL::text AS ref,
-      NULL::bigint AS bm25_rank
+      NULL::bigint AS ${sql.raw(rankAlias)}
     WHERE false
   `;
 }
 
-/**
- * Build the vector retrieval subquery.
- *
- * This branch:
- * - filters to rows with non-null embeddings
- * - applies repo/ref filters before top-k truncation
- * - ranks by pgvector distance
- *
- * Lower distance means higher similarity, so ordering is ascending.
- */
-function buildVectorHitsCte(args: {
+function buildHitsCte(args: {
+  orderExpr: ReturnType<typeof sql>;
+  rankAlias: "bm25_rank" | "vector_rank";
+  extraPredicate: ReturnType<typeof sql>;
   metadataPredicate: ReturnType<typeof buildMetadataPredicate>;
-  vectorParam: string;
   fetchLimit: number;
 }) {
-  const { metadataPredicate, vectorParam, fetchLimit } = args;
-  const repoJoins = buildRepoJoins();
-
+  const { orderExpr, rankAlias, extraPredicate, metadataPredicate, fetchLimit } = args;
   const whereClause = metadataPredicate
-    ? sql`WHERE ${metadataPredicate} AND c.embedding IS NOT NULL`
-    : sql`WHERE c.embedding IS NOT NULL`;
+    ? sql`WHERE ${metadataPredicate} AND ${extraPredicate}`
+    : sql`WHERE ${extraPredicate}`;
 
   return sql`
     SELECT
@@ -295,12 +253,10 @@ function buildVectorHitsCte(args: {
       rf.path AS file_path,
       r.name AS repo,
       rr.ref AS ref,
-      ROW_NUMBER() OVER (
-        ORDER BY (c.embedding <=> ${vectorParam}::vector) ASC, c.id ASC
-      ) AS vector_rank
-    ${repoJoins}
+      ROW_NUMBER() OVER (ORDER BY ${orderExpr}, c.id ASC) AS ${sql.raw(rankAlias)}
+    ${buildRepoJoins()}
     ${whereClause}
-    ORDER BY (c.embedding <=> ${vectorParam}::vector) ASC, c.id ASC
+    ORDER BY ${orderExpr}, c.id ASC
     LIMIT ${fetchLimit}
   `;
 }
@@ -460,19 +416,24 @@ export async function searchHybrid(
    */
   const vectorParam = `[${queryEmbedding.join(",")}]`;
 
-  // Build the BM25 retrieval branch. If BM25 text is empty, disable that branch.
+  // Build the BM25 retrieval branch. If BM25 text is empty, substitute an
+  // empty-shape CTE — we cannot evaluate pdb.score() without a `@@@` match.
   const bm25HitsCte = bm25Query
-    ? buildBm25HitsCte({
-        bm25Query,
+    ? buildHitsCte({
+        orderExpr: sql`pdb.score(c.id) DESC`,
+        rankAlias: "bm25_rank",
+        extraPredicate: sql`c.content @@@ ${bm25Query}`,
         metadataPredicate,
         fetchLimit,
       })
-    : buildEmptyBm25HitsCte();
+    : buildEmptyHitsCte("bm25_rank");
 
   // Build the vector retrieval branch.
-  const vectorHitsCte = buildVectorHitsCte({
+  const vectorHitsCte = buildHitsCte({
+    orderExpr: sql`(c.embedding <=> ${vectorParam}::vector) ASC`,
+    rankAlias: "vector_rank",
+    extraPredicate: sql`c.embedding IS NOT NULL`,
     metadataPredicate,
-    vectorParam,
     fetchLimit,
   });
 

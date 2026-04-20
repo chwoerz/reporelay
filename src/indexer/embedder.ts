@@ -75,6 +75,32 @@ interface OllamaEmbedResponse {
   embeddings: number[][];
 }
 
+/**
+ * Shared init implementation: probe the model with a single token and
+ * verify the returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
+ * Captures the error string or `null` if everything is fine.
+ */
+async function probeEmbedderDimension(
+  embedder: Pick<Embedder, "embed">,
+  model: string,
+  fixHint: string,
+): Promise<string | null> {
+  try {
+    const probe = await embedder.embed(["dim"]);
+    const detected = probe[0]!.length;
+    if (detected !== DB_EMBEDDING_DIMENSIONS) {
+      return (
+        `Embedding dimension mismatch: model "${model}" produces ${detected}-d vectors, ` +
+        `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
+        `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model${fixHint}, or run a migration.`
+      );
+    }
+    return null;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
 export class OllamaEmbedder implements Embedder {
   private readonly url: string;
   private readonly model: string;
@@ -85,32 +111,8 @@ export class OllamaEmbedder implements Embedder {
     this.model = options.model;
   }
 
-  /**
-   * Probe the model by embedding a single token, then verify that the
-   * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
-   *
-   * Captures the error in {@link initError} instead of throwing so the
-   * server can start even when Ollama is unreachable. Callers should
-   * check `initError` to decide whether embedding-dependent features
-   * are available.
-   */
   async init(): Promise<void> {
-    try {
-      const probe = await this.embed(["dim"]);
-      const detected = probe[0]!.length;
-
-      if (detected !== DB_EMBEDDING_DIMENSIONS) {
-        this.initError =
-          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
-          `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
-          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model or run a migration.`;
-        return;
-      }
-
-      this.initError = null;
-    } catch (err) {
-      this.initError = err instanceof Error ? err.message : String(err);
-    }
+    this.initError = await probeEmbedderDimension(this, this.model, "");
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -189,30 +191,12 @@ export class OpenaiEmbedder implements Embedder {
     this.dimensions = options.dimensions;
   }
 
-  /**
-   * Probe the model by embedding a single token, then verify that the
-   * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
-   *
-   * Captures the error in {@link initError} instead of throwing so the
-   * server can start even when the API is unreachable.
-   */
   async init(): Promise<void> {
-    try {
-      const probe = await this.embed(["dim"]);
-      const detected = probe[0]!.length;
-
-      if (detected !== DB_EMBEDDING_DIMENSIONS) {
-        this.initError =
-          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
-          `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
-          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model, set EMBEDDING_DIMENSIONS=${DB_EMBEDDING_DIMENSIONS}, or run a migration.`;
-        return;
-      }
-
-      this.initError = null;
-    } catch (err) {
-      this.initError = err instanceof Error ? err.message : String(err);
-    }
+    this.initError = await probeEmbedderDimension(
+      this,
+      this.model,
+      `, set EMBEDDING_DIMENSIONS=${DB_EMBEDDING_DIMENSIONS}`,
+    );
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -313,6 +297,9 @@ export function truncateForEmbedding(text: string, maxTokens = MAX_EMBED_TOKENS)
  * @param concurrency - Max in-flight batches. Default 1 (sequential). Raise to
  *   dispatch multiple batches in parallel — bounded by the provider's parallel
  *   slot count (e.g. Ollama's OLLAMA_NUM_PARALLEL, default 4).
+ * @param onWaveDone - Optional hook fired after each parallel wave completes.
+ *   Receives `(completed, total)`. The promise is awaited before the next
+ *   wave starts, so callers can use it for cancellation checks and progress.
  * @returns {@link EmbedBatchResult} — embeddings (or null) + failures
  */
 export async function embedInBatches(
@@ -320,6 +307,7 @@ export async function embedInBatches(
   texts: string[],
   batchSize = 64,
   concurrency = 1,
+  onWaveDone?: (completed: number, total: number) => Promise<void> | void,
 ): Promise<EmbedBatchResult> {
   if (texts.length === 0) return { embeddings: [], failures: [] };
 
@@ -360,6 +348,10 @@ export async function embedInBatches(
   for (let w = 0; w < starts.length; w += concurrency) {
     const wave = starts.slice(w, w + concurrency);
     await Promise.all(wave.map(runBatch));
+    if (onWaveDone) {
+      const completed = Math.min((w + wave.length) * batchSize, safeTexts.length);
+      await onWaveDone(completed, safeTexts.length);
+    }
   }
 
   return { embeddings, failures };

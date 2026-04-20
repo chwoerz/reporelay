@@ -52,7 +52,6 @@ interface ResolvedRepo {
 interface SyncResult {
   mirrorPath: string;
   commitSha: string;
-  semver: string | undefined;
 }
 
 /**
@@ -98,7 +97,7 @@ async function syncAndResolve(opts: {
 
   const commitSha = job.commitSha ?? (await resolveCommitSha(mirrorPath, job.ref));
 
-  return { mirrorPath, commitSha, semver: parseSemver(job.ref) };
+  return { mirrorPath, commitSha };
 }
 
 /** Upsert the repo_ref row, returning its id. Sets stage to "syncing" and records start time. */
@@ -109,15 +108,16 @@ async function upsertRepoRef(
     repoId: number;
     ref: string;
     commitSha: string;
-    semver: string | undefined;
   },
 ): Promise<number> {
+  const semverValue = parseSemver(opts.ref) ?? null;
+
   if (opts.existingRef) {
     await refRepo.updateWhere(eq(repoRefs.id, opts.existingRef.id), {
       commitSha: opts.commitSha,
       stage: "syncing",
       stageMessage: "Mirror synced, preparing indexing…",
-      semver: opts.semver ?? null,
+      semver: semverValue,
       indexingStartedAt: new Date(),
       indexingError: null,
       filesTotal: 0,
@@ -134,7 +134,7 @@ async function upsertRepoRef(
     commitSha: opts.commitSha,
     stage: "syncing",
     stageMessage: "Mirror synced, preparing indexing…",
-    semver: opts.semver ?? null,
+    semver: semverValue,
     indexingStartedAt: new Date(),
   });
   return newRef.id;
@@ -353,7 +353,6 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
       repoId: repo.id,
       ref: job.ref,
       commitSha: sync.commitSha,
-      semver: sync.semver,
     });
 
     // 5. Checkout worktree & list files
