@@ -35,7 +35,15 @@ export class PipelineCancelledError extends Error {
   }
 }
 
-/** Default maximum file size in bytes (1 MB). Files larger than this are skipped. */
+/**
+ * Default maximum file size in bytes (3 MB). Files larger than this are skipped.
+ *
+ * Raised from the historical 1 MB cap so hand-edited-but-large files
+ * (large lockfiles-turned-source, bundled vendor code that's still searched,
+ * big protobuf-generated TS) are covered. Parsing + embedding cost scales
+ * roughly linearly with this cap, so the worker holds several copies of the
+ * file in memory at once — bump further only when you know there's headroom.
+ */
 export const DEFAULT_MAX_FILE_SIZE = 3 * 1024 * 1024;
 
 /** Default maximum average line length. Files above this are likely minified/generated. */
@@ -52,7 +60,7 @@ export interface PipelineOptions {
   embeddingConcurrency?: number;
   /** Chunker max tokens */
   maxTokensPerChunk?: number;
-  /** Max file size in bytes. Files larger are skipped. Default: 1 MB */
+  /** Max file size in bytes. Files larger are skipped. Default: 3 MB (see {@link DEFAULT_MAX_FILE_SIZE}). */
   maxFileSize?: number;
   /** Max average line length (chars). Files above are treated as minified/generated and skipped. Default: 500 */
   maxAvgLineLength?: number;
@@ -258,7 +266,10 @@ async function prepareFile(
   try {
     const hash = sha256(content);
     const { symbols, imports } = parse(content, file.language, file.path);
-    const chunkOutputs = chunkFile(content, symbols, imports, { maxTokens });
+    const chunkOutputs = chunkFile(content, symbols, imports, {
+      maxTokens,
+      language: file.language,
+    });
     return { kind: "prepared", prepared: { file, hash, symbols, imports, chunkOutputs } };
   } catch (err) {
     return {

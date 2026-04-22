@@ -87,15 +87,22 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
   async findEmbeddingsByContentSha256(hashes: string[]): Promise<Map<string, number[]>> {
     if (hashes.length === 0) return new Map();
     const unique = [...new Set(hashes)];
-    const rows = await this.db
-      .select({ contentSha256: chunks.contentSha256, embedding: chunks.embedding })
-      .from(chunks)
-      .where(and(inArray(chunks.contentSha256, unique), isNotNull(chunks.embedding)));
 
-    // There may be many rows per hash; keep the first embedding seen.
+    // DISTINCT ON keeps one row per hash at the DB level — without it, a hot
+    // hash with thousands of chunks would stream thousands of 768-d vectors
+    // into memory just so we could drop all but the first.
+    const rows = await this.db
+      .selectDistinctOn([chunks.contentSha256], {
+        contentSha256: chunks.contentSha256,
+        embedding: chunks.embedding,
+      })
+      .from(chunks)
+      .where(and(inArray(chunks.contentSha256, unique), isNotNull(chunks.embedding)))
+      .orderBy(chunks.contentSha256, chunks.id);
+
     const result = new Map<string, number[]>();
     for (const row of rows) {
-      if (row.contentSha256 && row.embedding && !result.has(row.contentSha256)) {
+      if (row.contentSha256 && row.embedding) {
         result.set(row.contentSha256, row.embedding);
       }
     }

@@ -62,5 +62,7 @@ curl -X PATCH http://localhost:3001/api/repos/my-repo \
 
 - Each file is processed in isolation — a parse error in one file doesn't stop the pipeline
 - `file-skipped` events are emitted for unsupported or too-large files
+  (default cap: 3 MB per file; also skipped if average line length > 500 chars,
+  which catches minified/generated bundles)
 - `file-error` events are emitted for parse failures
 - Progress is broadcast in real-time via PostgreSQL `LISTEN/NOTIFY`

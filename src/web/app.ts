@@ -30,7 +30,7 @@ import {
   RepoRepository,
   repos,
 } from "../storage/index.js";
-import type { RepoRefSelect, RepoSelect } from "../storage/schema/schema.js";
+import type { RepoRefSelect, RepoSelect } from "../storage/index.js";
 import type { PgBoss } from "pg-boss";
 import type { Embedder } from "../indexer/embedder.js";
 import type { Config } from "../core/config.js";
