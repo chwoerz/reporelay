@@ -96,19 +96,24 @@ function searchResultsToChunks(results: SearchResult[]): ContextChunk[] {
 }
 
 /**
- * Generic search-based gatherer — differs only by default query.
+ * Generic search-based gatherer.
  *
  * Resolves `input.ref` through semver before searching so that
  * constraints like `"^1.0.0"` or bare `"1.0.0"` match stored tags
  * like `"v1.0.0"`.
+ *
+ * When the caller does not supply a `query`, the repo name is used as a
+ * neutral fallback. The repo-name fallback is a *lot* weaker than a real
+ * query but at least avoids the old English-biased strings
+ * ("implementation patterns", "error handling") that dominated ranking
+ * regardless of the repo's actual language.
  */
 async function gatherBySearch(
   db: Db,
   embedder: Embedder,
   input: ContextPackInput,
-  defaultQuery: string,
 ): Promise<ContextChunk[]> {
-  const query = input.query ?? defaultQuery;
+  const query = input.query ?? input.repo;
 
   // Resolve ref through semver when we have a repo context.
   let ref = input.ref;
@@ -121,6 +126,7 @@ async function gatherBySearch(
     query,
     repo: input.repo,
     ref,
+    paths: input.paths,
     limit: 30,
   });
   return searchResultsToChunks(results);
@@ -175,10 +181,9 @@ const STRATEGY_MAP: Record<
   ContextStrategy,
   (db: Db, embedder: Embedder, input: ContextPackInput) => Promise<ContextChunk[]>
 > = {
-  explain: (db, embedder, input) => gatherBySearch(db, embedder, input, input.repo),
-  implement: (db, embedder, input) =>
-    gatherBySearch(db, embedder, input, "implementation patterns types interfaces"),
-  debug: (db, embedder, input) => gatherBySearch(db, embedder, input, "error handling exceptions"),
+  explain: gatherBySearch,
+  implement: gatherBySearch,
+  debug: gatherBySearch,
   "recent-changes": (db, _embedder, input) => gatherRecentChanges(db, input),
 };
 

@@ -15,6 +15,8 @@ export {
   createEmbedder,
   truncateForEmbedding,
   MAX_EMBED_TOKENS,
+  OLLAMA_MAX_INPUT_TOKENS,
+  OPENAI_MAX_INPUT_TOKENS,
 } from "./embedder.js";
 
 export {

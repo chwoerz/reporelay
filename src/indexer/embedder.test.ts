@@ -66,7 +66,12 @@ describe("Embedder", () => {
       const spy = vi.fn<Embedder["embed"]>(async (texts) =>
         texts.map(() => new Array(DB_EMBEDDING_DIMENSIONS).fill(0)),
       );
-      const embedder: Embedder = { embed: spy, init: async () => {}, initError: null };
+      const embedder: Embedder = {
+        embed: spy,
+        init: async () => {},
+        initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
+      };
 
       const texts = Array.from({ length: 10 }, (_, i) => `text-${i}`);
       await embedInBatches(embedder, texts, 3);
@@ -90,7 +95,12 @@ describe("Embedder", () => {
         });
       });
 
-      const embedder: Embedder = { embed: spy, init: async () => {}, initError: null };
+      const embedder: Embedder = {
+        embed: spy,
+        init: async () => {},
+        initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
+      };
       const texts = Array.from({ length: 5 }, (_, i) => `text-${i}`);
       const result = await embedInBatches(embedder, texts, 2);
 
@@ -110,7 +120,12 @@ describe("Embedder", () => {
       const spy = vi.fn<Embedder["embed"]>(async (texts) =>
         texts.map(() => new Array(DB_EMBEDDING_DIMENSIONS).fill(0)),
       );
-      const embedder: Embedder = { embed: spy, init: async () => {}, initError: null };
+      const embedder: Embedder = {
+        embed: spy,
+        init: async () => {},
+        initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
+      };
 
       // Create text that exceeds the token budget (dense numeric content)
       const longText = "0.123 ".repeat(MAX_EMBED_TOKENS + 500);
@@ -175,7 +190,12 @@ describe("Embedder", () => {
         if (callCount === 1 && texts.length > 1) throw new Error("batch too large");
         return texts.map(() => new Array(DB_EMBEDDING_DIMENSIONS).fill(0));
       });
-      const embedder: Embedder = { embed: spy, init: async () => {}, initError: null };
+      const embedder: Embedder = {
+        embed: spy,
+        init: async () => {},
+        initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
+      };
 
       const result = await embedInBatches(embedder, ["text1", "text2", "text3"], 64);
 
@@ -191,7 +211,12 @@ describe("Embedder", () => {
         if (texts.length > 1) throw new Error("batch error");
         return texts.map(() => new Array(DB_EMBEDDING_DIMENSIONS).fill(0));
       });
-      const embedder: Embedder = { embed: spy, init: async () => {}, initError: null };
+      const embedder: Embedder = {
+        embed: spy,
+        init: async () => {},
+        initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
+      };
 
       const result = await embedInBatches(embedder, ["a", "b"], 64);
 
@@ -207,6 +232,7 @@ describe("Embedder", () => {
         }),
         init: async () => {},
         initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
       };
 
       const result = await embedInBatches(embedder, ["good-text", "bad-text"], 64);
@@ -228,6 +254,7 @@ describe("Embedder", () => {
         }),
         init: async () => {},
         initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
       };
 
       // Must not throw — the safety-net guarantee
@@ -254,6 +281,7 @@ describe("Embedder", () => {
         }),
         init: async () => {},
         initError: null,
+        maxInputTokens: MAX_EMBED_TOKENS,
       };
 
       const result = await embedInBatches(embedder, ["good", "bad"], 64);

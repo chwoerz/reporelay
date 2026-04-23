@@ -32,6 +32,14 @@ export interface Embedder {
    * error without crashing the server.
    */
   initError: string | null;
+
+  /**
+   * Max tokens the provider accepts per input in a single embedding call.
+   * Used by {@link embedInBatches} to truncate oversized texts before
+   * sending them to the provider — different providers have very
+   * different budgets (Ollama/nomic: ~2k, OpenAI text-embedding-3: 8k).
+   */
+  maxInputTokens: number;
 }
 
 /**
@@ -101,14 +109,25 @@ async function probeEmbedderDimension(
   }
 }
 
+/**
+ * Token budget for Ollama-hosted embedding models.
+ *
+ * nomic-embed-text has a hard architecture limit of 2048 tokens (the
+ * `num_ctx: 8192` in Ollama's model params does NOT override this for
+ * embedding models). A small safety margin avoids edge cases.
+ */
+export const OLLAMA_MAX_INPUT_TOKENS = 1900;
+
 export class OllamaEmbedder implements Embedder {
   private readonly url: string;
   private readonly model: string;
   initError: string | null = null;
+  readonly maxInputTokens: number;
 
   constructor(options: OllamaEmbedderOptions) {
     this.url = options.url;
     this.model = options.model;
+    this.maxInputTokens = OLLAMA_MAX_INPUT_TOKENS;
   }
 
   async init(): Promise<void> {
@@ -177,18 +196,29 @@ export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
  * using the OpenAI request/response format (OpenAI, Azure OpenAI,
  * Together AI, Mistral, etc.).
  */
+/**
+ * Token budget for OpenAI-compatible embedding models.
+ *
+ * OpenAI's text-embedding-3 family accepts 8191 tokens per input; we leave
+ * a small safety margin. Azure OpenAI and compatible providers match the
+ * same limit.
+ */
+export const OPENAI_MAX_INPUT_TOKENS = 8000;
+
 export class OpenaiEmbedder implements Embedder {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly dimensions: number | undefined;
   initError: string | null = null;
+  readonly maxInputTokens: number;
 
   constructor(options: OpenaiEmbedderOptions) {
     this.apiKey = options.apiKey;
     this.model = options.model;
     this.baseUrl = (options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.dimensions = options.dimensions;
+    this.maxInputTokens = OPENAI_MAX_INPUT_TOKENS;
   }
 
   async init(): Promise<void> {
@@ -233,13 +263,14 @@ export class OpenaiEmbedder implements Embedder {
 }
 
 /**
- * Maximum tokens allowed per embedding input.
+ * Legacy alias for the Ollama/nomic token budget.
  *
- * nomic-embed-text has a hard architecture limit of 2048 tokens
- * (the `num_ctx: 8192` in Ollama's model params does NOT override this
- * for embedding models). We use a small safety margin.
+ * Kept as the default parameter for {@link truncateForEmbedding} so existing
+ * callers and tests stay compatible. New code should read
+ * {@link Embedder.maxInputTokens} from the embedder itself —
+ * {@link embedInBatches} already does this.
  */
-export const MAX_EMBED_TOKENS = 1900;
+export const MAX_EMBED_TOKENS = OLLAMA_MAX_INPUT_TOKENS;
 
 /**
  * Truncate a text to fit within the embedding model's token budget.
@@ -311,8 +342,8 @@ export async function embedInBatches(
 ): Promise<EmbedBatchResult> {
   if (texts.length === 0) return { embeddings: [], failures: [] };
 
-  // Truncate any texts exceeding the model's context window
-  const safeTexts = texts.map((t) => truncateForEmbedding(t));
+  // Truncate any texts exceeding the provider's context window.
+  const safeTexts = texts.map((t) => truncateForEmbedding(t, embedder.maxInputTokens));
 
   // Pre-allocate so parallel batches can write at their correct offsets
   // without having to coordinate on array order.

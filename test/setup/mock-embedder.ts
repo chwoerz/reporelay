@@ -6,7 +6,7 @@
  */
 import { vi } from "vitest";
 import type { Embedder } from "../../src/indexer/embedder.js";
-import { DB_EMBEDDING_DIMENSIONS } from "../../src/indexer/embedder.js";
+import { DB_EMBEDDING_DIMENSIONS, MAX_EMBED_TOKENS } from "../../src/indexer/embedder.js";
 
 /** Create a mock `Embedder` with `vi.fn()` spies on both methods. */
 export function createMockEmbedder(): Embedder {
@@ -17,5 +17,6 @@ export function createMockEmbedder(): Embedder {
     }),
     init: vi.fn(async () => {}),
     initError: null,
+    maxInputTokens: MAX_EMBED_TOKENS,
   };
 }
