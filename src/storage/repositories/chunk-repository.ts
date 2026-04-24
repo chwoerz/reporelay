@@ -1,28 +1,17 @@
 /**
  * Repository for the `chunks` table.
  */
-import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { FileContentBaseRepository } from "./base-repository.js";
 import { chunks } from "../schema/schema.js";
 import type { Db } from "../schema/db.js";
+import { IN_LIST_BATCH_SIZE, computeInsertBatchSize, inBatches } from "../batching.js";
 
 /** A single embedding update — either a successful vector or an error. */
 export interface EmbeddingUpdate {
   id: number;
   embedding: number[] | null;
   embeddingError?: string | null;
-}
-
-const HASH_LOOKUP_BATCH_SIZE = 1_000;
-
-function chunkArray<T>(items: readonly T[], size: number): T[][] {
-  const batches: T[][] = [];
-
-  for (let i = 0; i < items.length; i += size) {
-    batches.push(items.slice(i, i + size));
-  }
-
-  return batches;
 }
 
 export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
@@ -32,25 +21,32 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
 
   /**
    * Bulk-update embeddings for multiple chunks.
-   * Accepts an array of {@link EmbeddingUpdate} objects. When `embedding`
-   * is `null` the chunk is marked with its `embeddingError` reason so we
-   * can report which content failed to embed.
+   *
+   * Issues a single `UPDATE … FROM (VALUES …)` per batch instead of one
+   * statement per row — one round-trip replaces N, which matters a lot when
+   * each row carries a 768-dim vector payload.
    */
   async updateEmbeddingsBatch(updates: EmbeddingUpdate[]): Promise<void> {
     if (updates.length === 0) return;
 
+    const batchSize = computeInsertBatchSize(
+      updates as unknown as readonly Record<string, unknown>[],
+    );
+
     await this.db.transaction(async (tx) => {
-      await Promise.all(
-        updates.map(({ id, embedding, embeddingError }) =>
-          tx
-            .update(chunks)
-            .set({
-              embedding,
-              embeddingError: embeddingError ?? null,
-            })
-            .where(eq(chunks.id, id)),
-        ),
-      );
+      await inBatches(updates, batchSize, async (batch) => {
+        const rows = batch.map(({ id, embedding, embeddingError }) => {
+          const emb = embedding === null ? null : `[${embedding.join(",")}]`;
+          return sql`(${id}::int, ${emb}::text, ${embeddingError ?? null}::text)`;
+        });
+        await tx.execute(sql`
+          UPDATE chunks
+          SET embedding = v.embedding::vector,
+              embedding_error = v.embedding_error
+          FROM (VALUES ${sql.join(rows, sql`, `)}) AS v(id, embedding, embedding_error)
+          WHERE chunks.id = v.id
+        `);
+      });
     });
   }
 
@@ -85,15 +81,14 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
 
     const uniqueHashes = [...new Set(hashes)];
     const result = new Map<string, number[]>();
-
-    const hashBatches = chunkArray(uniqueHashes, HASH_LOOKUP_BATCH_SIZE);
+    const batchCount = Math.ceil(uniqueHashes.length / IN_LIST_BATCH_SIZE);
 
     console.log(
       `Looking up embeddings for ${hashes.length} hashes ` +
-        `(${uniqueHashes.length} unique) in ${hashBatches.length} batches...`,
+        `(${uniqueHashes.length} unique) in ${batchCount} batches...`,
     );
 
-    for (const hashBatch of hashBatches) {
+    await inBatches(uniqueHashes, IN_LIST_BATCH_SIZE, async (hashBatch) => {
       const rows = await this.db
         .selectDistinctOn([chunks.contentSha256], {
           contentSha256: chunks.contentSha256,
@@ -108,7 +103,7 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
           result.set(row.contentSha256, row.embedding);
         }
       }
-    }
+    });
 
     return result;
   }

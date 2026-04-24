@@ -78,6 +78,8 @@ export type PipelineProgressEvent =
   | { type: "embedding-failures"; failures: { chunkId: number; filePath: string; error: string }[] }
   /** Chunks reused from the content-sha256 cache vs. what still needs the embedder. */
   | { type: "chunk-cache"; chunksReused: number; chunksToEmbed: number }
+  /** Writing fully-embedded chunks back to the DB — may take several seconds for large batches. */
+  | { type: "persisting-embeddings"; chunksTotal: number }
   | { type: "finalizing" };
 
 export type PipelineProgressCallback = (event: PipelineProgressEvent) => void;
@@ -477,6 +479,7 @@ async function embedNewChunks(opts: {
       embeddingError: failure?.error ?? null,
     };
   });
+  onProgress?.({ type: "persisting-embeddings", chunksTotal: updates.length });
   await chunkRepo.updateEmbeddingsBatch(updates);
 
   if (results.failures.length > 0) {
