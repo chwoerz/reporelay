@@ -284,12 +284,17 @@ function pipelineProgressCallback(
           );
         }
         break;
+      case "persisting-embeddings":
+        update({
+          stageMessage: `Persisting ${event.chunksTotal} embedding(s) to the database…`,
+        });
+        break;
       case "finalizing":
         // Do NOT set stage here — the pipeline's own updateWhere (pipeline.ts)
         // sets stage to "ready" immediately after this callback fires.
         // A fire-and-forget "finalizing" write could race and overwrite "ready".
         update({
-          stageMessage: "Persisting embeddings and marking ref as ready…",
+          stageMessage: "Marking ref as ready…",
         });
         break;
     }

@@ -7,6 +7,7 @@
 import { eq, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Db } from "../schema/db.js";
+import { computeInsertBatchSize, inBatches } from "../batching.js";
 
 /**
  * Constraint: every table managed by BaseRepository must have an `id` serial column.
@@ -17,36 +18,6 @@ type TableWithId = PgTable & { id: any };
  * Constraint: tables that also have a `fileContentId` foreign key column.
  */
 type TableWithFileContentId = TableWithId & { fileContentId: any };
-
-const INSERT_PARAMETER_BUDGET = 60_000;
-const MAX_INSERT_ROWS_PER_BATCH = 1_000;
-
-function chunkArray<T>(items: readonly T[], size: number): T[][] {
-  const batches: T[][] = [];
-
-  for (let i = 0; i < items.length; i += size) {
-    batches.push(items.slice(i, i + size));
-  }
-
-  return batches;
-}
-
-function countDefinedInsertValues(row: Record<string, unknown>): number {
-  return Object.values(row).filter((value) => value !== undefined).length;
-}
-
-function getInsertBatchSize(rows: readonly Record<string, unknown>[]): number {
-  let maxValuesPerRow = 1;
-
-  for (const row of rows) {
-    maxValuesPerRow = Math.max(maxValuesPerRow, countDefinedInsertValues(row));
-  }
-
-  return Math.max(
-    1,
-    Math.min(MAX_INSERT_ROWS_PER_BATCH, Math.floor(INSERT_PARAMETER_BUDGET / maxValuesPerRow)),
-  );
-}
 
 export abstract class BaseRepository<T extends TableWithId> {
   constructor(
@@ -78,19 +49,20 @@ export abstract class BaseRepository<T extends TableWithId> {
   async insertMany(data: T["$inferInsert"][]): Promise<T["$inferSelect"][]> {
     if (data.length === 0) return [];
 
-    const batchSize = getInsertBatchSize(data as unknown as readonly Record<string, unknown>[]);
+    const batchSize = computeInsertBatchSize(
+      data as unknown as readonly Record<string, unknown>[],
+    );
 
     const insertedRows: T["$inferSelect"][] = [];
 
     await this.db.transaction(async (tx) => {
-      for (const batch of chunkArray(data, batchSize)) {
+      await inBatches(data, batchSize, async (batch) => {
         const rows = await tx
           .insert(this.table)
           .values(batch as any)
           .returning();
-
         insertedRows.push(...(rows as T["$inferSelect"][]));
-      }
+      });
     });
 
     return insertedRows;
