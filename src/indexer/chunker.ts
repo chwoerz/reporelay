@@ -11,11 +11,11 @@
 import type { Language, ParsedImport, ParsedSymbol } from "../core/types.js";
 
 export interface ChunkerOptions {
-  /** Max tokens per chunk (estimated via {@link estimateTokens}). Default: 512 */
+  /** Default: 512 */
   maxTokens?: number;
-  /** Overlap ratio for split windows (0-1). Default: 0.2 */
+  /** 0-1, default: 0.2 */
   overlapRatio?: number;
-  /** Source language — controls how the import prefix is rendered. */
+  /** Controls how the import prefix is rendered. */
   language?: Language;
 }
 
@@ -23,7 +23,6 @@ export interface ChunkOutput {
   content: string;
   startLine: number;
   endLine: number;
-  /** Symbol this chunk belongs to (if any). */
   symbolName?: string;
   symbolKind?: string;
   symbolSignature?: string;
@@ -49,11 +48,6 @@ export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3);
 }
 
-/**
- * Render one parsed import using the conventions of its source language.
- * Falls back to a minimal `source`-only line for languages where the
- * `ParsedImport` shape doesn't carry enough to reconstruct the original.
- */
 function renderImport(imp: ParsedImport, language?: Language): string {
   const hasNames = imp.names.length > 0;
   const names = imp.names.join(", ");
@@ -111,20 +105,15 @@ function renderImport(imp: ParsedImport, language?: Language): string {
   }
 }
 
-/** Build the import-block prefix that's prepended to every chunk. */
 function buildImportPrefix(imports: ParsedImport[], language?: Language): string {
   if (imports.length === 0) return "";
   return imports.map((imp) => renderImport(imp, language)).join("\n") + "\n\n";
 }
 
 /**
- * Emit one or more chunks over a line range, splitting into windows when the
- * content exceeds `budget`.
- *
- * This is the single workhorse for every chunk-emission path — symbol fits,
- * symbol-too-large, gap-fits, gap-too-large, symbolless-whole-file. It
- * handles the token-budget check, window sizing, and prefix composition in
- * one place so the three former helpers can't drift apart.
+ * Emit one or more chunks over a line range, splitting into windows when
+ * content exceeds `budget`. Single path for every caller (symbol, gap,
+ * symbolless whole file) so budget, windowing, and prefix stay in sync.
  */
 function emitWindows(
   chunks: ChunkOutput[],
@@ -197,15 +186,6 @@ function computeGapRanges(
   return gaps;
 }
 
-/**
- * Chunk file content into embedding-friendly pieces.
- *
- * @param fileContent - Full file source code
- * @param symbols - Parsed symbols from the file
- * @param imports - Parsed imports from the file
- * @param options - Chunker options (maxTokens, overlapRatio, language)
- * @returns Array of chunks with content, line ranges, and optional symbol metadata
- */
 export function chunkFile(
   fileContent: string,
   symbols: ParsedSymbol[],

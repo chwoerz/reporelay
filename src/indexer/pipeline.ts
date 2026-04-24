@@ -1,11 +1,7 @@
 /**
- * Indexing pipeline orchestrator.
- *
- * Takes a checked-out worktree path + file list and produces stored
- * file_contents, ref_files, symbols, chunks with embeddings.
- *
- * Designed to be called by the pg-boss job handler.
- * Git sync / worktree checkout happen externally.
+ * Takes a checked-out worktree + file list, produces file_contents,
+ * ref_files, symbols, and embedded chunks. Git sync / worktree checkout
+ * happen externally — this runs from the pg-boss job handler.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -36,42 +32,28 @@ export class PipelineCancelledError extends Error {
 }
 
 /**
- * Default maximum file size in bytes (3 MB). Files larger than this are skipped.
- *
- * Raised from the historical 1 MB cap so hand-edited-but-large files
- * (large lockfiles-turned-source, bundled vendor code that's still searched,
- * big protobuf-generated TS) are covered. Parsing + embedding cost scales
- * roughly linearly with this cap, so the worker holds several copies of the
- * file in memory at once — bump further only when you know there's headroom.
+ * Cost scales linearly — the worker holds several copies of a file in
+ * memory at once during parse+chunk+embed. Raise carefully.
  */
 export const DEFAULT_MAX_FILE_SIZE = 3 * 1024 * 1024;
 
-/** Default maximum average line length. Files above this are likely minified/generated. */
+/** Above this, files are treated as minified/generated and skipped. */
 export const DEFAULT_MAX_AVG_LINE_LENGTH = 500;
 
 export interface PipelineOptions {
-  /** Drizzle DB instance */
   db: Db;
-  /** Embedding provider */
   embedder: Embedder;
-  /** Embedding batch size */
   embeddingBatchSize?: number;
-  /** Max in-flight embedding HTTP requests. Default: 4. */
   embeddingConcurrency?: number;
-  /** Chunker max tokens */
   maxTokensPerChunk?: number;
-  /** Max file size in bytes. Files larger are skipped. Default: 3 MB (see {@link DEFAULT_MAX_FILE_SIZE}). */
   maxFileSize?: number;
-  /** Max average line length (chars). Files above are treated as minified/generated and skipped. Default: 500 */
   maxAvgLineLength?: number;
 }
 
 export interface PipelineInput {
-  /** Path to the checked-out worktree */
   worktreePath: string;
-  /** Repo ref ID (already created in DB) */
   repoRefId: number;
-  /** All file paths to index (from `git ls-tree`) */
+  /** From `git ls-tree`. */
   files: string[];
 }
 
@@ -81,13 +63,8 @@ export type PipelineProgressEvent =
   | { type: "file-skipped"; path: string; reason: FileSkipReason }
   | { type: "file-error"; path: string; error: string }
   /**
-   * Emitted once after all file batches are persisted and before embedding starts.
-   * Shows how much work was saved by sha256 dedup vs. how much is new/repair.
-   * - filesNew: files whose content wasn't in the DB yet (full parse + chunk + embed).
-   * - filesReused: files whose content was already stored (only ref_files upsert).
-   * - chunksNew: chunks inserted this run — all need embedding.
-   * - chunksRepair: pre-existing chunks with NULL embedding picked up for re-embed
-   *   (typically from a prior crashed/incomplete run).
+   * After persistence, before embedding. `chunksRepair` covers pre-existing
+   * chunks with NULL embedding (prior crashed/incomplete run).
    */
   | {
       type: "dedup-summary";
@@ -99,11 +76,7 @@ export type PipelineProgressEvent =
   | { type: "embedding-start"; chunksTotal: number }
   | { type: "embedding-batch-done"; chunksEmbedded: number; chunksTotal: number }
   | { type: "embedding-failures"; failures: { chunkId: number; filePath: string; error: string }[] }
-  /**
-   * Emitted once after chunk-level cache lookup, before embedding starts.
-   * Shows how many chunks reused an embedding from an identical chunk
-   * (by content sha256) vs. how many still need the embedding provider.
-   */
+  /** Chunks reused from the content-sha256 cache vs. what still needs the embedder. */
   | { type: "chunk-cache"; chunksReused: number; chunksToEmbed: number }
   | { type: "finalizing" };
 
@@ -118,15 +91,12 @@ interface TxRepos {
   imp: ImportRepository;
 }
 
-/** Reasons a file may be skipped during indexing. */
 export type FileSkipReason = "too-large" | "minified-or-generated" | "read-error" | "parse-error";
 
 interface NewChunkRow {
   chunkId: number;
   content: string;
-  /** sha256 of content — used for chunk-level embedding cache lookup. */
   contentSha256: string;
-  /** Source file path — carried through so embedding failures can report which file. */
   filePath: string;
 }
 
@@ -134,20 +104,14 @@ function sha256(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
 }
 
-/**
- * Check whether a file's content should be skipped.
- * Returns a skip reason or `null` if the file is OK to index.
- */
 export function shouldSkipFile(
   content: string,
   maxFileSize: number,
   maxAvgLineLength: number,
 ): FileSkipReason | null {
-  // Check byte size (Buffer.byteLength is accurate for UTF-8)
   if (Buffer.byteLength(content, "utf-8") > maxFileSize) {
     return "too-large";
   }
-  // Check average line length to detect minified / generated files
   const lines = content.split("\n");
   if (lines.length > 0) {
     const avgLineLen = content.length / lines.length;
@@ -170,7 +134,6 @@ function createTxRepos(tx: unknown): TxRepos {
   };
 }
 
-/** Filter changed paths through gitignore and classify to supported languages. */
 async function filterSupportedFiles(
   worktreePath: string,
   changed: string[],
@@ -182,7 +145,6 @@ async function filterSupportedFiles(
     .filter((f): f is { path: string; language: Language } => f.language != null);
 }
 
-/** Read a file's content, returning null if unreadable (binary, missing). */
 async function readFileContent(worktreePath: string, filePath: string): Promise<string | null> {
   try {
     return sanitizeUtf8BufferForPostgres(await readFile(join(worktreePath, filePath)));
@@ -191,13 +153,12 @@ async function readFileContent(worktreePath: string, filePath: string): Promise<
   }
 }
 
+// Postgres text columns reject NUL bytes even in otherwise-valid UTF-8.
 function sanitizeUtf8BufferForPostgres(buf: Buffer): string {
-  // Fast path: no NUL byte, decode once and return
   if (buf.indexOf(0x00) === -1) {
     return buf.toString("utf8");
   }
 
-  // Slow path: allocate only when needed
   const out = Buffer.allocUnsafe(buf.length);
   let j = 0;
 
@@ -211,7 +172,7 @@ function sanitizeUtf8BufferForPostgres(buf: Buffer): string {
   return out.subarray(0, j).toString("utf8");
 }
 
-/** Find a symbol ID by name (ignoring startLine, for split chunks). */
+// For chunks split off the primary symbol window — match on name only.
 function findSymbolIdByName(map: Map<string, number>, name: string): number | undefined {
   for (const [key, id] of map) {
     if (key.startsWith(`${name}:`)) return id;
@@ -219,7 +180,6 @@ function findSymbolIdByName(map: Map<string, number>, name: string): number | un
   return undefined;
 }
 
-/** Resolve the best-matching symbol ID for a chunk. */
 function resolveSymbolId(symbolIdMap: Map<string, number>, co: ChunkOutput): number | null {
   if (!co.symbolName) return null;
   return (
@@ -229,10 +189,7 @@ function resolveSymbolId(symbolIdMap: Map<string, number>, co: ChunkOutput): num
   );
 }
 
-/**
- * A file that's been read, parsed, and chunked — ready for DB persistence.
- * All CPU/IO work happens producing this; the batch transaction only writes.
- */
+/** All CPU/IO work producing this runs outside the DB transaction. */
 interface PreparedFile {
   file: { path: string; language: Language };
   hash: string;
@@ -246,10 +203,6 @@ type PrepareOutcome =
   | { kind: "skipped"; path: string; reason: FileSkipReason }
   | { kind: "error"; path: string; error: string };
 
-/**
- * Read + skip-check + parse + chunk a file outside any DB transaction.
- * Returns a PreparedFile ready to be bulk-persisted.
- */
 async function prepareFile(
   worktreePath: string,
   file: { path: string; language: Language },
@@ -280,11 +233,6 @@ async function prepareFile(
   }
 }
 
-/**
- * Persist a batch of prepared files in a single short transaction.
- * Dedupes by sha256, bulk-inserts file_contents / ref_files / symbols / imports / chunks.
- * Returns the chunks needing embedding (new chunks + unembedded from crashed runs).
- */
 interface PersistBatchResult {
   chunks: NewChunkRow[];
   filesNew: number;
@@ -492,18 +440,14 @@ async function applyChunkEmbeddingCache(
   return remaining;
 }
 
-/** Embed all new chunks and persist the vectors (or record failures). */
 async function embedNewChunks(opts: {
   embedder: Embedder;
   chunkRepo: ChunkRepository;
   newChunkRows: NewChunkRow[];
   batchSize: number;
-  /** Max in-flight HTTP batches per wave. 1 = fully sequential. */
   concurrency: number;
   onProgress?: PipelineProgressCallback;
-  /** Repo ref ID — used for cancellation checks between waves. */
   repoRefId: number;
-  /** DB instance — used for cancellation checks. */
   db: Db;
 }): Promise<void> {
   const { embedder, chunkRepo, newChunkRows, batchSize, concurrency, onProgress, repoRefId, db } =
@@ -513,9 +457,7 @@ async function embedNewChunks(opts: {
   onProgress?.({ type: "embedding-start", chunksTotal: newChunkRows.length });
 
   const texts = newChunkRows.map((r) => r.content);
-  // embedInBatches runs waves internally; the onWaveDone hook lets us check
-  // for cancellation and tick progress after each wave without duplicating
-  // the wave loop here.
+  // onWaveDone checks cancellation between waves so we don't duplicate the wave loop here.
   const results = await embedInBatches(
     embedder,
     texts,
@@ -527,7 +469,6 @@ async function embedNewChunks(opts: {
     },
   );
 
-  // Build update list — `null` embeddings keep the column NULL and get an error reason
   const updates = newChunkRows.map((r, i) => {
     const failure = results.failures.find((f) => f.index === i);
     return {
@@ -538,7 +479,6 @@ async function embedNewChunks(opts: {
   });
   await chunkRepo.updateEmbeddingsBatch(updates);
 
-  // Notify callers about failures so they can log / surface them
   if (results.failures.length > 0) {
     const failedChunks = results.failures.map((f) => ({
       chunkId: newChunkRows[f.index]!.chunkId,
@@ -549,10 +489,6 @@ async function embedNewChunks(opts: {
   }
 }
 
-/**
- * Compute language percentage breakdown from a list of files with languages.
- * Returns a map of language → percentage (0–100, rounded to 1 decimal).
- */
 function computeLanguageStats(files: { language: Language }[]): LanguageStats {
   if (files.length === 0) return {};
 
@@ -569,13 +505,9 @@ function computeLanguageStats(files: { language: Language }[]): LanguageStats {
   return stats;
 }
 
-/** Default file batch size for per-transaction commits. */
 const FILE_BATCH_SIZE = 50;
 
-/**
- * Check if the repo_ref row still exists in the DB.
- * Throws PipelineCancelledError if it was deleted (e.g. by a DELETE endpoint).
- */
+/** Throws PipelineCancelledError if the ref was deleted mid-run. */
 async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
   const refRepo = new RepoRefRepository(db);
   const rows = await refRepo.findAll(eq(repoRefs.id, repoRefId));
@@ -584,17 +516,7 @@ async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
   }
 }
 
-/**
- * Run the indexing pipeline for a single ref.
- *
- * Flow:
- * 1. Filter files (gitignore, language support)
- * 2. For each batch of files: read → hash → dedup or parse → chunk → store
- *    (each batch runs in its own short transaction to avoid long-held locks)
- * 3. Embed all new chunks (outside transaction — can be slow)
- * 4. Update ref status to "ready" with language stats (only after embeddings are persisted)
- * @return all indexed files
- */
+/** Returns the set of files that reached persistence. */
 export async function runPipeline(
   opts: PipelineOptions,
   input: PipelineInput,
@@ -620,15 +542,12 @@ export async function runPipeline(
   let totalChunksNew = 0;
   let totalChunksRepair = 0;
 
-  // Process files in small batches. All CPU/IO work (read, parse, chunk)
-  // runs in parallel outside the transaction; the transaction only writes.
+  // Small batches so transactions stay short and locks aren't held while we parse/chunk.
   for (let i = 0; i < filesToProcess.length; i += FILE_BATCH_SIZE) {
-    // Between batches, verify the ref wasn't deleted (e.g. by DELETE endpoint).
     if (i > 0) await assertRefExists(db, repoRefId);
 
     const batch = filesToProcess.slice(i, i + FILE_BATCH_SIZE);
 
-    // Parallel read + parse + chunk — no DB involvement.
     const outcomes = await Promise.all(
       batch.map((file) =>
         prepareFile(worktreePath, file, maxFileSize, maxAvgLineLength, maxTokensPerChunk),
@@ -645,7 +564,6 @@ export async function runPipeline(
       }
     }
 
-    // Short transaction: bulk-persist the whole batch.
     const batchResult = await db.transaction(async (tx) => {
       const repos = createTxRepos(tx);
       return persistBatch(repos, prepared, repoRefId);

@@ -1,9 +1,6 @@
 /**
- * Context builder — assembles context packs for MCP prompts.
- *
- * Each strategy (`explain`, `implement`, `debug`, `recent-changes`) gathers
- * relevant chunks from storage, respects a token budget, and formats
- * them into a single string ordered by file path then line number.
+ * Assembles context packs for MCP prompts. Each strategy gathers chunks,
+ * respects a token budget, and formats them ordered by file path then line.
  */
 import type { Db } from "../storage/index.js";
 import type { Embedder } from "../indexer/embedder.js";
@@ -41,14 +38,12 @@ export interface ContextPack {
   totalTokens: number;
 }
 
-/** Order chunks by file path, then startLine. */
 function sortChunks(chunks: ContextChunk[]): ContextChunk[] {
   return [...chunks].sort((a, b) =>
     a.filePath !== b.filePath ? a.filePath.localeCompare(b.filePath) : a.startLine - b.startLine,
   );
 }
 
-/** Trim chunks to fit within token budget, discarding from the tail. */
 function trimToBudget(chunks: ContextChunk[], maxTokens: number): ContextChunk[] {
   const result: ContextChunk[] = [];
   let used = 0;
@@ -67,7 +62,6 @@ function trimToBudget(chunks: ContextChunk[], maxTokens: number): ContextChunk[]
   return result;
 }
 
-/** Format chunks into a single string with file path headers. */
 export function formatContextPack(pack: ContextPack): string {
   const lines: string[] = [];
   let lastFile = "";
@@ -96,17 +90,10 @@ function searchResultsToChunks(results: SearchResult[]): ContextChunk[] {
 }
 
 /**
- * Generic search-based gatherer.
- *
- * Resolves `input.ref` through semver before searching so that
- * constraints like `"^1.0.0"` or bare `"1.0.0"` match stored tags
- * like `"v1.0.0"`.
- *
- * When the caller does not supply a `query`, the repo name is used as a
- * neutral fallback. The repo-name fallback is a *lot* weaker than a real
- * query but at least avoids the old English-biased strings
- * ("implementation patterns", "error handling") that dominated ranking
- * regardless of the repo's actual language.
+ * Resolves `input.ref` through semver first so constraints like `"^1.0.0"`
+ * or `"1.0.0"` match stored tags like `"v1.0.0"`. Falls back to the repo
+ * name when no query is supplied — weak signal, but neutral across
+ * languages.
  */
 async function gatherBySearch(
   db: Db,
@@ -115,7 +102,6 @@ async function gatherBySearch(
 ): Promise<ContextChunk[]> {
   const query = input.query ?? input.repo;
 
-  // Resolve ref through semver when we have a repo context.
   let ref = input.ref;
   if (ref) {
     const resolved = await resolveRef(db, input.repoId, ref);
@@ -132,7 +118,6 @@ async function gatherBySearch(
   return searchResultsToChunks(results);
 }
 
-/** Recent-changes: compare two indexed refs, annotate with change type. */
 async function gatherRecentChanges(db: Db, input: ContextPackInput): Promise<ContextChunk[]> {
   const toResolved = input.ref ? await resolveRef(db, input.repoId, input.ref) : null;
   if (!toResolved) return [];
@@ -163,7 +148,7 @@ async function gatherRecentChanges(db: Db, input: ContextPackInput): Promise<Con
   const nested = await Promise.all(chunkPromises);
   const chunks = nested.flat();
 
-  // Also note deleted files (no content, just annotation)
+  // Deleted files have no content — surface them as annotation-only entries.
   const deletedAnnotations: ContextChunk[] = changes
     .filter((c) => c.changeType === "deleted")
     .map((c) => ({
@@ -187,9 +172,6 @@ const STRATEGY_MAP: Record<
   "recent-changes": (db, _embedder, input) => gatherRecentChanges(db, input),
 };
 
-/**
- * Build a context pack for the given strategy.
- */
 export async function buildContextPack(
   db: Db,
   embedder: Embedder,

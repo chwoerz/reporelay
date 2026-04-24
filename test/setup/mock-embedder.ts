@@ -1,14 +1,8 @@
-/**
- * Shared mock embedder factory for tests.
- *
- * Returns a proper Vitest mock object that satisfies the `Embedder` interface
- * with zero-vector responses — no external dependencies required.
- */
+/** Zero-vector mock Embedder for tests — no external dependencies. */
 import { vi } from "vitest";
 import type { Embedder } from "../../src/indexer/embedder.js";
 import { DB_EMBEDDING_DIMENSIONS, MAX_EMBED_TOKENS } from "../../src/indexer/embedder.js";
 
-/** Create a mock `Embedder` with `vi.fn()` spies on both methods. */
 export function createMockEmbedder(): Embedder {
   return {
     embed: vi.fn(async (texts: string[]) => {
