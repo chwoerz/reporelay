@@ -10,7 +10,7 @@
  * Routes are organized into three groups:
  *  - System routes (health, credentials, indexing status)
  *  - Repo management routes (CRUD, sync, delete)
- *  - Feature routes (search, browse, symbols, context)
+ *  - Feature routes (search, browse, symbols)
  */
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import cors from "@fastify/cors";
@@ -37,7 +37,6 @@ import type { Config } from "../core/config.js";
 import { listGitRefs, syncMirror } from "../git/git-sync.js";
 import { hasTokenConfigured, getConfiguredHosts } from "../git/git-credentials.js";
 import {
-  buildContext,
   cleanupOrphansBackground,
   findByPattern,
   findReferences,
@@ -53,7 +52,6 @@ import {
   createRepoBodySchema,
   syncBodySchema,
   updateRepoBodySchema,
-  contextBodySchema,
   apiPaths,
 } from "../generated/index.js";
 import pino from "pino";
@@ -486,37 +484,6 @@ function registerFeatureRoutes(app: FastifyInstance, ctx: RouteContext): void {
     return reply.send(refs);
   });
 
-  app.post<{ Params: { name: string } }>(apiPaths.buildContext, async (req, reply) => {
-    const parsed = contextBodySchema.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: parsed.error.issues[0]!.message });
-    }
-
-    const repo = await findRepo(deps.db, req.params.name);
-    if (!repo) {
-      return reply.status(404).send({ error: "Repository not found." });
-    }
-
-    const { pack, formatted } = await buildContext(deps.db, deps.embedder, {
-      repo: repo.name,
-      repoId: repo.id,
-      strategy: parsed.data.strategy,
-      ref: parsed.data.ref,
-      fromRef: parsed.data.fromRef,
-      query: parsed.data.query,
-      paths: parsed.data.paths,
-      maxTokens: parsed.data.maxTokens,
-    });
-
-    return reply.send({
-      strategy: pack.strategy,
-      repo: pack.repo,
-      ref: pack.ref,
-      totalTokens: pack.totalTokens,
-      chunks: pack.chunks,
-      formatted,
-    });
-  });
 }
 
 /**

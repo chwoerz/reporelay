@@ -17,9 +17,6 @@ import {
 } from "../storage/index.js";
 import type { Embedder } from "../indexer/embedder.js";
 import {
-  buildContextPack,
-  type ContextPackInput,
-  formatContextPack,
   type HybridSearchOptions,
   resolveRef,
   searchHybrid,
@@ -324,15 +321,6 @@ export async function findReferences(
 ): Promise<ImportRef[]> {
   const importRepo = new ImportRepository(db);
   return importRepo.findReferencesInRef(refId, symbolName);
-}
-
-/**
- * Build a context pack (explain / implement / debug / recent-changes).
- */
-export async function buildContext(db: Db, embedder: Embedder, input: ContextPackInput) {
-  const pack = await buildContextPack(db, embedder, input);
-  const formatted = formatContextPack(pack);
-  return { pack, formatted };
 }
 
 /**

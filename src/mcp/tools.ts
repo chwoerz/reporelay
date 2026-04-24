@@ -9,9 +9,8 @@
 import { z } from "zod/v4";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { McpDeps } from "./server.js";
-import { ContextStrategies, Languages } from "../core/types.js";
+import { Languages } from "../core/types.js";
 import {
-  buildContext,
   findByPattern,
   findReferences,
   findRepo,
@@ -249,43 +248,6 @@ export function registerTools(server: McpServer, deps: McpDeps): void {
         return `${r.filePath} — from "${r.source}" ${label}`;
       });
       return textResult(lines.join("\n"));
-    },
-  );
-
-  server.registerTool(
-    "build_context_pack",
-    {
-      title: "Build Context Pack",
-      description: "Build task-specific context for explain / implement / debug / recent-changes.",
-      inputSchema: z.object({
-        repo: z.string().describe("Repository name"),
-        task: z.enum(ContextStrategies).describe("Context strategy"),
-        ref: z.string().optional().describe("Ref/tag (supports semver constraints)"),
-        fromRef: z.string().optional().describe("Base ref for recent-changes (previous version)"),
-        query: z.string().optional().describe("Guiding query for context gathering"),
-        paths: z.array(z.string()).optional().describe("Specific file paths to focus on"),
-        maxTokens: z.number().int().positive().optional().describe("Token budget (default 8192)"),
-      }),
-    },
-    async ({ repo: repoName, task, ref: refParam, fromRef, query, paths, maxTokens }) => {
-      const repo = await findRepo(deps.db, repoName);
-      if (!repo) return errorResult(`Repository "${repoName}" not found.`);
-
-      const { pack, formatted } = await buildContext(deps.db, deps.embedder, {
-        repo: repoName,
-        repoId: repo.id,
-        strategy: task,
-        ref: refParam,
-        fromRef,
-        query,
-        paths,
-        maxTokens,
-      });
-
-      if (pack.chunks.length === 0) return textResult("No context found for the given parameters.");
-      return textResult(
-        `[${pack.strategy}] ${pack.repo}@${pack.ref ?? "latest"} (${pack.totalTokens} tokens)\n\n${formatted}`,
-      );
     },
   );
 

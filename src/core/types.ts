@@ -86,9 +86,6 @@ export interface SearchResult {
   symbolName?: string;
 }
 
-export const ContextStrategies = ["explain", "implement", "debug", "recent-changes"] as const;
-export type ContextStrategy = (typeof ContextStrategies)[number];
-
 export interface IndexJob {
   repo: string;
   ref: string;

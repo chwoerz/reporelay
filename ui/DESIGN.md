@@ -398,7 +398,6 @@ Standalone component using CDK `Overlay`, `OverlayRef`, `CdkTrapFocus`.
 | Search code             | `router.navigate(['/search'])`          |
 | Browse files `{name}`   | Navigate to file browser for that repo  |
 | View symbols `{name}`   | Navigate to symbol explorer for that repo|
-| Build context `{name}`  | Navigate to context builder for that repo|
 
 ### 7.6 Keyboard
 
@@ -445,9 +444,9 @@ When the progress bar is actively moving (not at 0% or 100%):
 }
 ```
 
-### 8.4 Search/Context Loading
+### 8.4 Search Loading
 
-When `httpResource` is in loading state (search results pending, context building):
+When `httpResource` is in loading state (search results pending):
 
 - Subtle `box-shadow: 0 0 16px var(--cw-cyan-glow)` on the results container.
 - Spinner color: `var(--cw-cyan)`.
@@ -470,7 +469,7 @@ When `httpResource` is in loading state (search results pending, context buildin
 - **Refs table:** Dark table (5.2). Stage chips. Active rows get cyan glow.
 - **Progress card:** Dark surface. When indexing, the entire card gets a subtle
   `border: 1px solid var(--cw-cyan-glow)` and the progress bar gets glow treatment (8.2).
-- **Action buttons** (browse, symbols, context): outlined buttons (5.4).
+- **Action buttons** (browse, symbols): outlined buttons (5.4).
 
 ### 9.3 Search (`search.component`)
 
@@ -495,18 +494,12 @@ When `httpResource` is in loading state (search results pending, context buildin
 - **Detail panel:** Code signature in mono on dark code background.
   Documentation text in `--cw-text-secondary`.
 
-### 9.6 Context Builder (`context-builder.component`)
-
-- **Config form:** Dark inputs (5.3) for query, repo selection, ref selection.
-- **Result card:** Dark card with generated context. Code in custom hljs theme.
-- **Loading state:** Cobalt/cyan glow on result area (8.4).
-
-### 9.7 Shared: RefPicker
+### 9.6 Shared: RefPicker
 
 - Uses `mat-select` — inherits dark select styling (5.6).
 - Option groups: group label in `--cw-text-dim`. Options in `--cw-text-secondary`.
 
-### 9.8 Shared: ProgressCard
+### 9.7 Shared: ProgressCard
 
 - Dark card surface. Label: `--cw-text-muted`. Percentage: `--cw-text-primary`.
 - When actively indexing: Composio glow treatment (8.2).
@@ -555,7 +548,6 @@ Changes are primarily CSS with minor HTML tweaks for class additions.
 | `search.component.css` | Dark form, dark result cards, dark code blocks. |
 | `file-browser.component.css` | Dark tree panel, dark content panel. |
 | `symbol-explorer.component.css` | Dark search, dark result cards, dark detail. |
-| `context-builder.component.css` | Dark form, dark result card. |
 | `ref-picker.component.css` | Dark select styling. |
 | `progress-card.component.css` | Dark progress surface. |
 
@@ -588,7 +580,6 @@ Changes are primarily CSS with minor HTML tweaks for class additions.
 | `progress-card.component.html` | Add conditional class when actively indexing. |
 | `app.component.css` | Sidebar repo dot pulse animation (8.3). |
 | `search.component.css` | Loading glow on results container (8.4). |
-| `context-builder.component.css` | Loading glow on result area (8.4). |
 
 **Verify:** `pnpm build`. Visual check that glow appears only on active states.
 
@@ -634,7 +625,6 @@ Changes are primarily CSS with minor HTML tweaks for class additions.
 | `ui/src/app/search/search.component.css` | 2, 4 |
 | `ui/src/app/file-browser/file-browser.component.css` | 2 |
 | `ui/src/app/symbol-explorer/symbol-explorer.component.css` | 2 |
-| `ui/src/app/context-builder/context-builder.component.css` | 2 |
 | `ui/src/app/shared/ref-picker/ref-picker.component.css` | 2 |
 | `ui/src/app/shared/progress-card/progress-card.component.css` | 2, 4 |
 

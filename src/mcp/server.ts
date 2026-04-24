@@ -1,7 +1,7 @@
 /**
  * MCP server factory.
  *
- * Creates an McpServer, registers tools/resources/prompts, and starts
+ * Creates an McpServer, registers tools/resources, and starts
  * a stateless HTTP transport.  Each incoming request gets a fresh
  * McpServer + StreamableHTTPServerTransport pair (no sessions).
  *
@@ -16,7 +16,6 @@ import type { Embedder } from "../indexer/embedder.js";
 import type { Config } from "../core/config.js";
 import { registerTools } from "./tools.js";
 import { registerResources } from "./resources.js";
-import { registerPrompts } from "./prompts.js";
 
 export interface McpDeps {
   db: Db;
@@ -32,7 +31,7 @@ export interface McpDeps {
 }
 
 /**
- * Create and configure the McpServer with all tools, resources, and prompts.
+ * Create and configure the McpServer with all tools and resources.
  */
 export function createMcpServer(deps: McpDeps): McpServer {
   const server = new McpServer(
@@ -42,7 +41,6 @@ export function createMcpServer(deps: McpDeps): McpServer {
 
   registerTools(server, deps);
   registerResources(server, deps);
-  registerPrompts(server, deps);
 
   return server;
 }

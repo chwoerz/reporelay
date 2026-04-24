@@ -13,9 +13,9 @@ reporelay/
 │   │   ├── schema/         Drizzle ORM schema, DB connection, migrations
 │   │   ├── repositories/   Type-safe CRUD repositories extending a generic base class
 │   │   └── queue/          pg-boss job queue wrapper
-│   ├── retrieval/          Hybrid search (BM25+vector), semver resolver, context builder
+│   ├── retrieval/          Hybrid search (BM25+vector), semver resolver
 │   ├── services/           Shared business logic (used by both MCP tools and web API)
-│   ├── mcp/                MCP server (HTTP), tools, resources, prompts
+│   ├── mcp/                MCP server (HTTP), tools, resources
 │   ├── mcp-proxy/          Local MCP proxy for remote servers (language injection)
 │   ├── web/                Fastify REST API + Swagger UI at /docs
 │   ├── worker/             Background indexing worker (pg-boss handler)
@@ -37,7 +37,7 @@ reporelay/
 
 ### `src/core/`
 
-Shared configuration, types, and utilities used across all modules. Includes Zod-validated environment config, shared type definitions (`Languages`, `SymbolKinds`, `ContextStrategies`, etc.), Pino logger factory, and application bootstrap logic.
+Shared configuration, types, and utilities used across all modules. Includes Zod-validated environment config, shared type definitions (`Languages`, `SymbolKinds`, etc.), Pino logger factory, and application bootstrap logic.
 
 ### `src/generated/`
 
@@ -61,7 +61,7 @@ Database layer using Drizzle ORM with PostgreSQL. Contains the schema definition
 
 ### `src/retrieval/`
 
-Search and context building. Combines BM25 full-text search (ParadeDB `pg_search`) with vector similarity (pgvector cosine) via Reciprocal Rank Fusion. Includes semver range resolution for tags and four context-building strategies: `explain`, `implement`, `debug`, `recent-changes`.
+Hybrid search. Combines BM25 full-text search (ParadeDB `pg_search`) with vector similarity (pgvector cosine) via Reciprocal Rank Fusion. Includes semver range resolution for tags.
 
 ### `src/services/`
 
@@ -69,7 +69,7 @@ Shared business logic consumed by both the MCP server and the REST API.
 
 ### `src/mcp/`
 
-Model Context Protocol server. Registers tools, resource templates, and prompt templates. Bootstraps DB + embedder on startup.
+Model Context Protocol server. Registers tools and resource templates. Bootstraps DB + embedder on startup.
 
 ### `src/mcp-proxy/`
 
@@ -77,7 +77,7 @@ Local MCP proxy for remote RepoRelay servers. Runs as a stdio server on the deve
 
 ### `src/web/`
 
-Fastify REST API with Swagger UI. Handles system routes, repository management, and feature routes (search, file browsing, symbols, context building).
+Fastify REST API with Swagger UI. Handles system routes, repository management, and feature routes (search, file browsing, symbols).
 
 ### `src/worker/`
 

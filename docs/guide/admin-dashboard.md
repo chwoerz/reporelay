@@ -12,7 +12,6 @@ The Angular 21 admin dashboard provides a full UI for managing repositories and 
 | **Repo List**       | List repos, inline add form (local or remote), live indexing progress, token indicators                           |
 | **Repo Detail**     | Ref table with status, sync with branch/tag picker, repo-level glob patterns, per-ref delete, live progress cards |
 | **Search**          | Hybrid code search with syntax highlighting                                                                       |
-| **Context Builder** | Build context packs (explain/implement/debug/recent-changes)                                                      |
 | **File Browser**    | File tree with filter + file content viewer with line numbers                                                     |
 | **Symbol Explorer** | Find files/symbols by pattern, lookup symbol source + imports                                                     |
 

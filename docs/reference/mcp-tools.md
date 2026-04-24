@@ -1,8 +1,7 @@
 # MCP Tools & Resources
 
 RepoRelay implements the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to provide
-code context directly to LLM agents. The MCP server exposes **7 tools**, **2 resources**, and
-**3 prompts**.
+code context directly to LLM agents. The MCP server exposes **6 tools** and **2 resources**.
 
 ## Server
 
@@ -147,40 +146,6 @@ find_references({ repo: "my-api", symbolName: "login" })
 
 ---
 
-### `build_context_pack`
-
-Build task-specific context packs from indexed code. Four strategies are available:
-
-| Strategy         | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `explain`        | Understand how a library or module works                    |
-| `implement`      | Get guidance for building with existing patterns            |
-| `debug`          | Debug an error with relevant code context                   |
-| `recent-changes` | Review recent changes between two refs (requires `fromRef`) |
-
-| Parameter   | Type     | Required | Description                                                 |
-| ----------- | -------- | -------- | ----------------------------------------------------------- |
-| `repo`      | string   | yes      | Repository name                                             |
-| `task`      | string   | yes      | Strategy: `explain`, `implement`, `debug`, `recent-changes` |
-| `ref`       | string   | no       | Ref/tag (supports semver constraints)                       |
-| `fromRef`   | string   | no       | Base ref for `recent-changes` strategy                      |
-| `query`     | string   | no       | Guiding query for context gathering                         |
-| `paths`     | string[] | no       | Specific file paths to focus on                             |
-| `maxTokens` | number   | no       | Token budget (default 8192)                                 |
-
-**Example:**
-
-```
-build_context_pack({
-  repo: "my-api",
-  task: "implement",
-  query: "Add rate limiting to the auth endpoints",
-  maxTokens: 4096
-})
-```
-
----
-
 ### `list_repos`
 
 List all registered repositories with their indexing status and indexed refs.
@@ -224,49 +189,6 @@ MCP resources allow clients to browse and read indexed content via URI templates
 
 Resource listings enumerate all repositories with `ready` refs, so clients can browse
 available content without calling tools first.
-
----
-
-## Prompts
-
-Prompts provide pre-built templates for common workflows. Each prompt calls `build_context_pack`
-internally and returns a formatted message with relevant code context.
-
-### `explain-library`
-
-Understand how a library or module works.
-
-| Argument | Type   | Required | Description                  |
-| -------- | ------ | -------- | ---------------------------- |
-| `repo`   | string | yes      | Repository name              |
-| `query`  | string | no       | Module or topic to focus on  |
-| `ref`    | string | no       | Ref/tag (semver constraints) |
-
-**Generated message:** "Explain the architecture and key concepts of {query or repo}. Use the following indexed code context: ..."
-
-### `implement-feature`
-
-Get guidance for building with existing patterns.
-
-| Argument | Type   | Required | Description                  |
-| -------- | ------ | -------- | ---------------------------- |
-| `repo`   | string | yes      | Repository name              |
-| `query`  | string | yes      | Feature description          |
-| `ref`    | string | no       | Ref/tag (semver constraints) |
-
-**Generated message:** "I want to implement: {query}. Follow the existing patterns in the codebase. Here is the relevant context: ..."
-
-### `debug-issue`
-
-Debug an error with relevant code context.
-
-| Argument | Type   | Required | Description                  |
-| -------- | ------ | -------- | ---------------------------- |
-| `repo`   | string | yes      | Repository name              |
-| `query`  | string | yes      | Issue description            |
-| `ref`    | string | no       | Ref/tag (semver constraints) |
-
-**Generated message:** "I'm debugging this issue: {query}. Here is the relevant code context: ..."
 
 ---
 

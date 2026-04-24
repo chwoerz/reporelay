@@ -43,12 +43,6 @@ describe("MCP Tool Definitions", () => {
     });
   });
 
-  describe("build_context_pack", () => {
-    it("is registered", () => {
-      expect(getTools()["build_context_pack"]).toBeDefined();
-    });
-  });
-
   describe("list_repos", () => {
     it("is registered", () => {
       expect(getTools()["list_repos"]).toBeDefined();
@@ -56,14 +50,13 @@ describe("MCP Tool Definitions", () => {
   });
 
   describe("all tools", () => {
-    it("server has exactly 7 tools registered", () => {
-      expect(Object.keys(getTools()).length).toBe(7);
+    it("server has exactly 6 tools registered", () => {
+      expect(Object.keys(getTools()).length).toBe(6);
     });
 
-    it("all 7 tool names are present", () => {
+    it("all 6 tool names are present", () => {
       const names = Object.keys(getTools()).sort();
       expect(names).toEqual([
-        "build_context_pack",
         "find",
         "find_references",
         "get_file",

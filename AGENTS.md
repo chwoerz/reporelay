@@ -96,7 +96,7 @@ ui/            Angular 21 admin dashboard (see ui/DESIGN.md for UI design spec)
 | Classes                | `PascalCase`            | `ChunkRepository`, `OllamaEmbedder`      |
 | Interfaces, types      | `PascalCase`            | `Embedder`, `PipelineOptions`            |
 | Module-level constants | `UPPER_SNAKE_CASE`      | `RRF_K`, `DEFAULT_LIMIT`                 |
-| `as const` arrays      | `PascalCase`            | `Languages`, `ContextStrategies`         |
+| `as const` arrays      | `PascalCase`            | `Languages`, `SymbolKinds`               |
 | Database columns       | `snake_case` in SQL     | `local_path`, `created_at`               |
 | Files                  | `kebab-case`            | `hybrid-search.ts`, `file-classifier.ts` |
 | Tests (unit)           | `*.test.ts`             | `config.test.ts`                         |

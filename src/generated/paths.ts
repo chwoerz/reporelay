@@ -2,7 +2,6 @@
 // Regenerate with: pnpm generate:api
 
 export const apiPaths = {
-  buildContext: "/api/repos/:name/context",
   createRepo: "/api/repos",
   deleteRepo: "/api/repos/:name",
   deleteVersion: "/api/repos/:name/versions/:ref",
