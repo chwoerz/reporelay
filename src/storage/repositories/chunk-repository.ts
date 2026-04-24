@@ -1,7 +1,7 @@
 /**
  * Repository for the `chunks` table.
  */
-import { eq, inArray, isNull, isNotNull, and } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { FileContentBaseRepository } from "./base-repository.js";
 import { chunks } from "../schema/schema.js";
 import type { Db } from "../schema/db.js";
@@ -11,6 +11,18 @@ export interface EmbeddingUpdate {
   id: number;
   embedding: number[] | null;
   embeddingError?: string | null;
+}
+
+const HASH_LOOKUP_BATCH_SIZE = 1_000;
+
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  const batches: T[][] = [];
+
+  for (let i = 0; i < items.length; i += size) {
+    batches.push(items.slice(i, i + size));
+  }
+
+  return batches;
 }
 
 export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
@@ -26,6 +38,7 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
    */
   async updateEmbeddingsBatch(updates: EmbeddingUpdate[]): Promise<void> {
     if (updates.length === 0) return;
+
     await this.db.transaction(async (tx) => {
       await Promise.all(
         updates.map(({ id, embedding, embeddingError }) =>
@@ -65,11 +78,49 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
   }
 
   /**
-   * Count chunks missing embeddings (either never embedded or failed).
+   * Look up one embedding per unique `content_sha256` for cache reuse.
+   *
+   * Given a list of chunk-content hashes, returns `{hash → embedding}` for
+   * hashes that already have an embedded chunk anywhere in the DB.
+   *
+   * Hashes are looked up in conservative batches to avoid Postgres / driver
+   * limits around large generated expressions and bind parameter counts.
+   *
+   * `DISTINCT ON` keeps one row per hash at the DB level — without it, a hot
+   * hash with thousands of chunks could stream thousands of large vectors into
+   * memory just so we could drop all but the first.
    */
-  async countUnembedded(): Promise<number> {
-    const rows = await this.findAll(isNull(chunks.embedding));
-    return rows.length;
+  async findEmbeddingsByContentSha256(hashes: string[]): Promise<Map<string, number[]>> {
+    if (hashes.length === 0) return new Map();
+
+    const uniqueHashes = [...new Set(hashes)];
+    const result = new Map<string, number[]>();
+
+    const hashBatches = chunkArray(uniqueHashes, HASH_LOOKUP_BATCH_SIZE);
+
+    console.log(
+      `Looking up embeddings for ${hashes.length} hashes ` +
+        `(${uniqueHashes.length} unique) in ${hashBatches.length} batches...`,
+    );
+
+    for (const hashBatch of hashBatches) {
+      const rows = await this.db
+        .selectDistinctOn([chunks.contentSha256], {
+          contentSha256: chunks.contentSha256,
+          embedding: chunks.embedding,
+        })
+        .from(chunks)
+        .where(and(inArray(chunks.contentSha256, hashBatch), isNotNull(chunks.embedding)))
+        .orderBy(chunks.contentSha256, chunks.id);
+
+      for (const row of rows) {
+        if (row.contentSha256 && row.embedding) {
+          result.set(row.contentSha256, row.embedding);
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
