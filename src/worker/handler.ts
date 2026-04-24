@@ -52,7 +52,6 @@ interface ResolvedRepo {
 interface SyncResult {
   mirrorPath: string;
   commitSha: string;
-  semver: string | undefined;
 }
 
 /**
@@ -98,7 +97,7 @@ async function syncAndResolve(opts: {
 
   const commitSha = job.commitSha ?? (await resolveCommitSha(mirrorPath, job.ref));
 
-  return { mirrorPath, commitSha, semver: parseSemver(job.ref) };
+  return { mirrorPath, commitSha };
 }
 
 /** Upsert the repo_ref row, returning its id. Sets stage to "syncing" and records start time. */
@@ -109,15 +108,16 @@ async function upsertRepoRef(
     repoId: number;
     ref: string;
     commitSha: string;
-    semver: string | undefined;
   },
 ): Promise<number> {
+  const semverValue = parseSemver(opts.ref) ?? null;
+
   if (opts.existingRef) {
     await refRepo.updateWhere(eq(repoRefs.id, opts.existingRef.id), {
       commitSha: opts.commitSha,
       stage: "syncing",
       stageMessage: "Mirror synced, preparing indexing…",
-      semver: opts.semver ?? null,
+      semver: semverValue,
       indexingStartedAt: new Date(),
       indexingError: null,
       filesTotal: 0,
@@ -134,7 +134,7 @@ async function upsertRepoRef(
     commitSha: opts.commitSha,
     stage: "syncing",
     stageMessage: "Mirror synced, preparing indexing…",
-    semver: opts.semver ?? null,
+    semver: semverValue,
     indexingStartedAt: new Date(),
   });
   return newRef.id;
@@ -218,6 +218,44 @@ function pipelineProgressCallback(
           "File processing error (continuing)",
         );
         break;
+      case "dedup-summary": {
+        const totalFiles = event.filesNew + event.filesReused;
+        const totalChunks = event.chunksNew + event.chunksRepair;
+        logger.info(
+          {
+            repo: job.repo,
+            ref: job.ref,
+            filesNew: event.filesNew,
+            filesReused: event.filesReused,
+            chunksNew: event.chunksNew,
+            chunksRepair: event.chunksRepair,
+          },
+          `Dedup: ${event.filesReused}/${totalFiles} files reused from existing content; ` +
+            `${event.chunksNew} new chunks to embed, ${event.chunksRepair} pre-existing chunks to repair (previously unembedded)`,
+        );
+        update({
+          stageMessage:
+            `Dedup: ${event.filesReused}/${totalFiles} files reused · ` +
+            `${totalChunks} chunk(s) to embed (${event.chunksNew} new, ${event.chunksRepair} repair)`,
+        });
+        break;
+      }
+      case "chunk-cache": {
+        const total = event.chunksReused + event.chunksToEmbed;
+        logger.info(
+          {
+            repo: job.repo,
+            ref: job.ref,
+            chunksReused: event.chunksReused,
+            chunksToEmbed: event.chunksToEmbed,
+          },
+          `Chunk cache: ${event.chunksReused}/${total} chunks reused from existing embeddings; ${event.chunksToEmbed} to embed`,
+        );
+        update({
+          stageMessage: `Chunk cache: ${event.chunksReused}/${total} reused · ${event.chunksToEmbed} to embed`,
+        });
+        break;
+      }
       case "embedding-start":
         update({
           stage: "embedding",
@@ -315,7 +353,6 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
       repoId: repo.id,
       ref: job.ref,
       commitSha: sync.commitSha,
-      semver: sync.semver,
     });
 
     // 5. Checkout worktree & list files
@@ -340,7 +377,12 @@ export async function handleIndexJob(job: IndexJob, deps: WorkerDeps): Promise<v
     });
 
     const indexedFilePaths = await runPipeline(
-      { db, embedder, embeddingBatchSize: config.EMBEDDING_BATCH_SIZE },
+      {
+        db,
+        embedder,
+        embeddingBatchSize: config.EMBEDDING_BATCH_SIZE,
+        embeddingConcurrency: config.EMBEDDING_CONCURRENCY,
+      },
       { worktreePath, repoRefId, files },
       pipelineProgressCallback(refRepo, repoRefId, logger, job),
     );

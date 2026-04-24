@@ -32,6 +32,14 @@ export interface Embedder {
    * error without crashing the server.
    */
   initError: string | null;
+
+  /**
+   * Max tokens the provider accepts per input in a single embedding call.
+   * Used by {@link embedInBatches} to truncate oversized texts before
+   * sending them to the provider — different providers have very
+   * different budgets (Ollama/nomic: ~2k, OpenAI text-embedding-3: 8k).
+   */
+  maxInputTokens: number;
 }
 
 /**
@@ -75,42 +83,55 @@ interface OllamaEmbedResponse {
   embeddings: number[][];
 }
 
+/**
+ * Shared init implementation: probe the model with a single token and
+ * verify the returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
+ * Captures the error string or `null` if everything is fine.
+ */
+async function probeEmbedderDimension(
+  embedder: Pick<Embedder, "embed">,
+  model: string,
+  fixHint: string,
+): Promise<string | null> {
+  try {
+    const probe = await embedder.embed(["dim"]);
+    const detected = probe[0]!.length;
+    if (detected !== DB_EMBEDDING_DIMENSIONS) {
+      return (
+        `Embedding dimension mismatch: model "${model}" produces ${detected}-d vectors, ` +
+        `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
+        `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model${fixHint}, or run a migration.`
+      );
+    }
+    return null;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
+/**
+ * Token budget for Ollama-hosted embedding models.
+ *
+ * nomic-embed-text has a hard architecture limit of 2048 tokens (the
+ * `num_ctx: 8192` in Ollama's model params does NOT override this for
+ * embedding models). A small safety margin avoids edge cases.
+ */
+export const OLLAMA_MAX_INPUT_TOKENS = 1900;
+
 export class OllamaEmbedder implements Embedder {
   private readonly url: string;
   private readonly model: string;
   initError: string | null = null;
+  readonly maxInputTokens: number;
 
   constructor(options: OllamaEmbedderOptions) {
     this.url = options.url;
     this.model = options.model;
+    this.maxInputTokens = OLLAMA_MAX_INPUT_TOKENS;
   }
 
-  /**
-   * Probe the model by embedding a single token, then verify that the
-   * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
-   *
-   * Captures the error in {@link initError} instead of throwing so the
-   * server can start even when Ollama is unreachable. Callers should
-   * check `initError` to decide whether embedding-dependent features
-   * are available.
-   */
   async init(): Promise<void> {
-    try {
-      const probe = await this.embed(["dim"]);
-      const detected = probe[0]!.length;
-
-      if (detected !== DB_EMBEDDING_DIMENSIONS) {
-        this.initError =
-          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
-          `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
-          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model or run a migration.`;
-        return;
-      }
-
-      this.initError = null;
-    } catch (err) {
-      this.initError = err instanceof Error ? err.message : String(err);
-    }
+    this.initError = await probeEmbedderDimension(this, this.model, "");
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -175,44 +196,37 @@ export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
  * using the OpenAI request/response format (OpenAI, Azure OpenAI,
  * Together AI, Mistral, etc.).
  */
+/**
+ * Token budget for OpenAI-compatible embedding models.
+ *
+ * OpenAI's text-embedding-3 family accepts 8191 tokens per input; we leave
+ * a small safety margin. Azure OpenAI and compatible providers match the
+ * same limit.
+ */
+export const OPENAI_MAX_INPUT_TOKENS = 8000;
+
 export class OpenaiEmbedder implements Embedder {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly dimensions: number | undefined;
   initError: string | null = null;
+  readonly maxInputTokens: number;
 
   constructor(options: OpenaiEmbedderOptions) {
     this.apiKey = options.apiKey;
     this.model = options.model;
     this.baseUrl = (options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.dimensions = options.dimensions;
+    this.maxInputTokens = OPENAI_MAX_INPUT_TOKENS;
   }
 
-  /**
-   * Probe the model by embedding a single token, then verify that the
-   * returned vector width matches {@link DB_EMBEDDING_DIMENSIONS}.
-   *
-   * Captures the error in {@link initError} instead of throwing so the
-   * server can start even when the API is unreachable.
-   */
   async init(): Promise<void> {
-    try {
-      const probe = await this.embed(["dim"]);
-      const detected = probe[0]!.length;
-
-      if (detected !== DB_EMBEDDING_DIMENSIONS) {
-        this.initError =
-          `Embedding dimension mismatch: model "${this.model}" produces ${detected}-d vectors, ` +
-          `but the DB schema expects ${DB_EMBEDDING_DIMENSIONS}. ` +
-          `Either switch to a ${DB_EMBEDDING_DIMENSIONS}-d model, set EMBEDDING_DIMENSIONS=${DB_EMBEDDING_DIMENSIONS}, or run a migration.`;
-        return;
-      }
-
-      this.initError = null;
-    } catch (err) {
-      this.initError = err instanceof Error ? err.message : String(err);
-    }
+    this.initError = await probeEmbedderDimension(
+      this,
+      this.model,
+      `, set EMBEDDING_DIMENSIONS=${DB_EMBEDDING_DIMENSIONS}`,
+    );
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -249,13 +263,14 @@ export class OpenaiEmbedder implements Embedder {
 }
 
 /**
- * Maximum tokens allowed per embedding input.
+ * Legacy alias for the Ollama/nomic token budget.
  *
- * nomic-embed-text has a hard architecture limit of 2048 tokens
- * (the `num_ctx: 8192` in Ollama's model params does NOT override this
- * for embedding models). We use a small safety margin.
+ * Kept as the default parameter for {@link truncateForEmbedding} so existing
+ * callers and tests stay compatible. New code should read
+ * {@link Embedder.maxInputTokens} from the embedder itself —
+ * {@link embedInBatches} already does this.
  */
-export const MAX_EMBED_TOKENS = 1900;
+export const MAX_EMBED_TOKENS = OLLAMA_MAX_INPUT_TOKENS;
 
 /**
  * Truncate a text to fit within the embedding model's token budget.
@@ -310,39 +325,63 @@ export function truncateForEmbedding(text: string, maxTokens = MAX_EMBED_TOKENS)
  * @param embedder - The embedder provider to use
  * @param texts - All texts to embed
  * @param batchSize - Max texts per batch (default: 64)
+ * @param concurrency - Max in-flight batches. Default 1 (sequential). Raise to
+ *   dispatch multiple batches in parallel — bounded by the provider's parallel
+ *   slot count (e.g. Ollama's OLLAMA_NUM_PARALLEL, default 4).
+ * @param onWaveDone - Optional hook fired after each parallel wave completes.
+ *   Receives `(completed, total)`. The promise is awaited before the next
+ *   wave starts, so callers can use it for cancellation checks and progress.
  * @returns {@link EmbedBatchResult} — embeddings (or null) + failures
  */
 export async function embedInBatches(
   embedder: Embedder,
   texts: string[],
   batchSize = 64,
+  concurrency = 1,
+  onWaveDone?: (completed: number, total: number) => Promise<void> | void,
 ): Promise<EmbedBatchResult> {
   if (texts.length === 0) return { embeddings: [], failures: [] };
 
-  // Truncate any texts exceeding the model's context window
-  const safeTexts = texts.map((t) => truncateForEmbedding(t));
+  // Truncate any texts exceeding the provider's context window.
+  const safeTexts = texts.map((t) => truncateForEmbedding(t, embedder.maxInputTokens));
 
-  const embeddings: (number[] | null)[] = [];
+  // Pre-allocate so parallel batches can write at their correct offsets
+  // without having to coordinate on array order.
+  const embeddings: (number[] | null)[] = new Array(safeTexts.length).fill(null);
   const failures: EmbeddingFailure[] = [];
 
-  for (let i = 0; i < safeTexts.length; i += batchSize) {
-    const batch = safeTexts.slice(i, i + batchSize);
+  const runBatch = async (start: number): Promise<void> => {
+    const batch = safeTexts.slice(start, start + batchSize);
     try {
       const batchEmbeddings = await embedder.embed(batch);
-      embeddings.push(...batchEmbeddings);
+      for (let k = 0; k < batchEmbeddings.length; k++) {
+        embeddings[start + k] = batchEmbeddings[k]!;
+      }
     } catch {
       // Batch failed — fall back to embedding each text individually in parallel.
       const settled = await Promise.allSettled(batch.map((text) => embedder.embed([text])));
       for (const [j, result] of settled.entries()) {
         if (result.status === "fulfilled") {
-          embeddings.push(result.value[0]!);
+          embeddings[start + j] = result.value[0]!;
         } else {
           const msg =
             result.reason instanceof Error ? result.reason.message : String(result.reason);
-          embeddings.push(null);
-          failures.push({ index: i + j, error: msg });
+          embeddings[start + j] = null;
+          failures.push({ index: start + j, error: msg });
         }
       }
+    }
+  };
+
+  // Collect batch start offsets, then dispatch in waves of `concurrency`.
+  const starts: number[] = [];
+  for (let i = 0; i < safeTexts.length; i += batchSize) starts.push(i);
+  for (let w = 0; w < starts.length; w += concurrency) {
+    const wave = starts.slice(w, w + concurrency);
+    await Promise.all(wave.map(runBatch));
+    if (onWaveDone) {
+      const completed = Math.min((w + wave.length) * batchSize, safeTexts.length);
+      await onWaveDone(completed, safeTexts.length);
     }
   }
 

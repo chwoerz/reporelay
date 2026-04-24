@@ -18,6 +18,7 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { eq } from "drizzle-orm";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Db } from "../storage/index.js";
 import {
   cancelIndexJob,
@@ -29,7 +30,7 @@ import {
   RepoRepository,
   repos,
 } from "../storage/index.js";
-import type { RepoSelect } from "../storage/schema/schema.js";
+import type { RepoRefSelect, RepoSelect } from "../storage/index.js";
 import type { PgBoss } from "pg-boss";
 import type { Embedder } from "../indexer/embedder.js";
 import type { Config } from "../core/config.js";
@@ -103,20 +104,43 @@ async function requireResolvedRef(
   return resolved;
 }
 
-/** Mirror status reader — returns 'ready' when no entry is tracked. */
-function getMirrorStatus(
+/** Shape a repo row for list/get/update responses, including refs + mirror state. */
+function serializeRepoWithRefs(
+  repo: RepoSelect,
+  refs: RepoRefSelect[],
   mirrorStatus: RouteContext["mirrorStatus"],
-  name: string,
-): "cloning" | "ready" | "error" {
-  return mirrorStatus.get(name)?.status ?? "ready";
+) {
+  const state = mirrorStatus.get(repo.name);
+  return {
+    ...repo,
+    mirrorStatus: state?.status ?? "ready",
+    mirrorError: state?.error,
+    tokenConfigured: repo.remoteUrl ? hasTokenConfigured(repo.remoteUrl) : false,
+    refs: refs.map((r) => ({
+      ref: r.ref,
+      stage: r.stage,
+      commitSha: r.commitSha,
+      languageStats: r.languageStats,
+      indexingError: r.indexingError ?? undefined,
+    })),
+  };
 }
 
-/** Mirror error reader — returns undefined when no error is tracked. */
-function getMirrorError(
-  mirrorStatus: RouteContext["mirrorStatus"],
-  name: string,
-): string | undefined {
-  return mirrorStatus.get(name)?.error;
+/** Shape a repo_ref row for indexing-status endpoints. */
+function serializeIndexingStatus(repoName: string, ref: RepoRefSelect) {
+  return {
+    repo: repoName,
+    ref: ref.ref,
+    stage: ref.stage,
+    message: ref.stageMessage ?? "",
+    filesTotal: ref.filesTotal,
+    filesProcessed: ref.filesProcessed,
+    chunksTotal: ref.chunksTotal,
+    chunksEmbedded: ref.chunksEmbedded,
+    startedAt: ref.indexingStartedAt?.toISOString() ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    error: ref.indexingError ?? undefined,
+  };
 }
 
 function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
@@ -142,19 +166,7 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
     const entries = await Promise.all(
       active.map(async (ref) => {
         const repo = await new RepoRepository(deps.db).findById(ref.repoId);
-        return {
-          repo: repo?.name ?? "unknown",
-          ref: ref.ref,
-          stage: ref.stage,
-          message: ref.stageMessage ?? "",
-          filesTotal: ref.filesTotal,
-          filesProcessed: ref.filesProcessed,
-          chunksTotal: ref.chunksTotal,
-          chunksEmbedded: ref.chunksEmbedded,
-          startedAt: ref.indexingStartedAt?.toISOString() ?? new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          error: ref.indexingError ?? undefined,
-        };
+        return serializeIndexingStatus(repo?.name ?? "unknown", ref);
       }),
     );
     return reply.send(entries);
@@ -171,19 +183,7 @@ function registerSystemRoutes(app: FastifyInstance, ctx: RouteContext): void {
       if (!ref || ref.stage === "ready" || ref.stage === "error") {
         return reply.status(404).send({ error: "No active indexing tracked for this repo/ref." });
       }
-      return reply.send({
-        repo: req.params.name,
-        ref: ref.ref,
-        stage: ref.stage,
-        message: ref.stageMessage ?? "",
-        filesTotal: ref.filesTotal,
-        filesProcessed: ref.filesProcessed,
-        chunksTotal: ref.chunksTotal,
-        chunksEmbedded: ref.chunksEmbedded,
-        startedAt: ref.indexingStartedAt?.toISOString() ?? new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        error: ref.indexingError ?? undefined,
-      });
+      return reply.send(serializeIndexingStatus(req.params.name, ref));
     },
   );
 }
@@ -236,31 +236,14 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
         setTimeout(() => mirrorStatus.delete(name), 60_000);
       });
 
-    return reply.status(201).send({
-      ...repo,
-      mirrorStatus: getMirrorStatus(mirrorStatus, name),
-      tokenConfigured: remoteUrl ? hasTokenConfigured(remoteUrl) : false,
-    });
+    return reply.status(201).send(serializeRepoWithRefs(repo, [], mirrorStatus));
   });
 
   app.get(apiPaths.listRepos, async (_req, reply) => {
     const entries = await listReposWithRefs(deps.db);
-
-    const result = entries.map(({ repo, refs }) => ({
-      ...repo,
-      mirrorStatus: getMirrorStatus(mirrorStatus, repo.name),
-      mirrorError: getMirrorError(mirrorStatus, repo.name),
-      tokenConfigured: repo.remoteUrl ? hasTokenConfigured(repo.remoteUrl) : false,
-      refs: refs.map((r) => ({
-        ref: r.ref,
-        stage: r.stage,
-        commitSha: r.commitSha,
-        languageStats: r.languageStats,
-        indexingError: r.indexingError ?? undefined,
-      })),
-    }));
-
-    return reply.send(result);
+    return reply.send(
+      entries.map(({ repo, refs }) => serializeRepoWithRefs(repo, refs, mirrorStatus)),
+    );
   });
 
   app.get<{ Params: { name: string } }>(apiPaths.getRepo, async (req, reply) => {
@@ -268,20 +251,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     if (!repo) return;
 
     const refs = await refRepo.findByRepoId(repo.id);
-
-    return reply.send({
-      ...repo,
-      mirrorStatus: getMirrorStatus(mirrorStatus, repo.name),
-      mirrorError: getMirrorError(mirrorStatus, repo.name),
-      tokenConfigured: repo.remoteUrl ? hasTokenConfigured(repo.remoteUrl) : false,
-      refs: refs.map((r) => ({
-        ref: r.ref,
-        stage: r.stage,
-        commitSha: r.commitSha,
-        languageStats: r.languageStats,
-        indexingError: r.indexingError ?? undefined,
-      })),
-    });
+    return reply.send(serializeRepoWithRefs(repo, refs, mirrorStatus));
   });
 
   app.get<{ Params: { name: string } }>(apiPaths.getGitRefs, async (req, reply) => {
@@ -348,19 +318,7 @@ function registerRepoRoutes(app: FastifyInstance, ctx: RouteContext): void {
     });
 
     const refs = await refRepo.findByRepoId(repo.id);
-    return reply.send({
-      ...updated,
-      mirrorStatus: getMirrorStatus(mirrorStatus, repo.name),
-      mirrorError: getMirrorError(mirrorStatus, repo.name),
-      tokenConfigured: repo.remoteUrl ? hasTokenConfigured(repo.remoteUrl) : false,
-      refs: refs.map((r) => ({
-        ref: r.ref,
-        stage: r.stage,
-        commitSha: r.commitSha,
-        languageStats: r.languageStats,
-        indexingError: r.indexingError ?? undefined,
-      })),
-    });
+    return reply.send(serializeRepoWithRefs(updated ?? repo, refs, mirrorStatus));
   });
 
   app.delete<{ Params: { name: string } }>(apiPaths.deleteRepo, async (req, reply) => {
@@ -614,7 +572,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   // Serve OpenAPI spec + Swagger UI at /docs
-  const specDir = new URL("../../", import.meta.url).pathname;
+  const specDir = fileURLToPath(new URL("../../", import.meta.url));
   app.register(swagger, {
     mode: "static",
     specification: {

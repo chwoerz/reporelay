@@ -49,6 +49,13 @@ export const configSchema = z
     EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
     EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(64),
     /**
+     * Max in-flight HTTP requests to the embedding endpoint.
+     * Defaults to 4 to match Ollama's default OLLAMA_NUM_PARALLEL=4.
+     * Increase on servers with a higher parallel setting; drop to 1–2
+     * if you see timeouts or 5xx responses from the provider.
+     */
+    EMBEDDING_CONCURRENCY: z.coerce.number().int().positive().default(4),
+    /**
      * Number of dimensions to request from the embedding API.
      * Only supported by some providers (e.g. OpenAI text-embedding-3).
      * Must produce vectors matching DB_EMBEDDING_DIMENSIONS (768) or

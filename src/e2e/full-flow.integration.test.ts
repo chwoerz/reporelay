@@ -98,6 +98,7 @@ describe("End-to-end: API → pg-boss → worker → pipeline (integration)", ()
       EMBEDDING_URL: "http://localhost:11434",
       EMBEDDING_MODEL: "nomic-embed-text",
       EMBEDDING_BATCH_SIZE: 64,
+      EMBEDDING_CONCURRENCY: 1,
       MCP_SERVER_PORT: 3000,
       WEB_PORT: 3001,
       GIT_MIRRORS_DIR: mirrorsDir,

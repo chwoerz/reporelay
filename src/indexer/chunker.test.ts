@@ -244,8 +244,8 @@ describe("shouldSkipFile", () => {
   });
 
   it("returns 'too-large' for files exceeding maxFileSize", () => {
-    // Create a 2 MB file
-    const content = "x".repeat(2 * 1024 * 1024);
+    // Create a file just over the default 3 MB cap
+    const content = "x".repeat(DEFAULT_MAX_FILE_SIZE + 1024);
     expect(shouldSkipFile(content, DEFAULT_MAX_FILE_SIZE, DEFAULT_MAX_AVG_LINE_LENGTH)).toBe(
       "too-large",
     );

@@ -23,7 +23,29 @@ Add to `.env`:
 EMBEDDING_PROVIDER=ollama          # default, can be omitted
 EMBEDDING_URL=http://localhost:11434
 EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_CONCURRENCY=4            # must match OLLAMA_NUM_PARALLEL
 ```
+
+### Tuning parallelism
+
+Indexing large repos is typically bottlenecked on embedding throughput. Two knobs have to agree:
+
+- **`EMBEDDING_CONCURRENCY`** (RepoRelay) — how many batches RepoRelay dispatches in parallel.
+- **`OLLAMA_NUM_PARALLEL`** (Ollama server) — how many requests the Ollama server will process concurrently. Extra client requests just queue.
+
+Setting `EMBEDDING_CONCURRENCY` higher than `OLLAMA_NUM_PARALLEL` gains nothing. Start with both at `4`.
+
+**macOS (Ollama.app):** env vars set in your shell are ignored — the app reads them from `launchctl`. Quit Ollama, then:
+
+```bash
+launchctl setenv OLLAMA_NUM_PARALLEL 4
+launchctl setenv OLLAMA_MAX_LOADED_MODELS 1
+# Relaunch Ollama from the menu bar
+```
+
+**Linux / `ollama serve` directly:** `OLLAMA_NUM_PARALLEL=4 ollama serve`.
+
+If the embedding model is running on CPU or a single GPU that's already saturated by one request, parallelism won't help — requests will accept concurrently but serialize internally. In that case lower `EMBEDDING_CONCURRENCY` back to `1`.
 
 ## OpenAI-compatible
 
