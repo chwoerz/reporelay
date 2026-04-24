@@ -1,7 +1,3 @@
-export type { BuildContext200, BuildContext400, BuildContext404, BuildContext503, BuildContextMutation, BuildContextMutationRequest, BuildContextMutationResponse, BuildContextPathParams } from "./types/BuildContext.js";
-export type { ContextBody, ContextBodyStrategyEnumKey } from "./types/ContextBody.js";
-export type { ContextChunk } from "./types/ContextChunk.js";
-export type { ContextPackResult } from "./types/ContextPackResult.js";
 export type { CreateRepo201, CreateRepo400, CreateRepo409, CreateRepoMutation, CreateRepoMutationRequest, CreateRepoMutationResponse } from "./types/CreateRepo.js";
 export type { CreateRepoBody } from "./types/CreateRepoBody.js";
 export type { DeleteRepo204, DeleteRepo404, DeleteRepoMutation, DeleteRepoMutationResponse, DeleteRepoPathParams } from "./types/DeleteRepo.js";
@@ -39,16 +35,11 @@ export type { SyncRepo202, SyncRepo400, SyncRepo404, SyncRepo503, SyncRepoMutati
 export type { SyncResponse } from "./types/SyncResponse.js";
 export type { UpdateRepo200, UpdateRepo400, UpdateRepo404, UpdateRepoMutation, UpdateRepoMutationRequest, UpdateRepoMutationResponse, UpdateRepoPathParams } from "./types/UpdateRepo.js";
 export type { UpdateRepoBody } from "./types/UpdateRepoBody.js";
-export { contextBodyStrategyEnum } from "./types/ContextBody.js";
 export { findQueryParamsKindEnum } from "./types/Find.js";
 export { embedderStatusEnum } from "./types/HealthResponse.js";
 export { healthResponseStatusEnum } from "./types/HealthResponse.js";
 export { indexingStageEnum } from "./types/IndexingStage.js";
 export { repoMirrorStatusEnum } from "./types/Repo.js";
-export { buildContext200Schema, buildContext400Schema, buildContext404Schema, buildContext503Schema, buildContextMutationRequestSchema, buildContextMutationResponseSchema, buildContextPathParamsSchema } from "./zod/buildContextSchema.js";
-export { contextBodySchema } from "./zod/contextBodySchema.js";
-export { contextChunkSchema } from "./zod/contextChunkSchema.js";
-export { contextPackResultSchema } from "./zod/contextPackResultSchema.js";
 export { createRepoBodySchema } from "./zod/createRepoBodySchema.js";
 export { createRepo201Schema, createRepo400Schema, createRepo409Schema, createRepoMutationRequestSchema, createRepoMutationResponseSchema } from "./zod/createRepoSchema.js";
 export { deleteRepo204Schema, deleteRepo404Schema, deleteRepoMutationResponseSchema, deleteRepoPathParamsSchema } from "./zod/deleteRepoSchema.js";

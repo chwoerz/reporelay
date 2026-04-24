@@ -1,7 +1,3 @@
-export type { BuildContext200, BuildContext400, BuildContext404, BuildContext503, BuildContextMutation, BuildContextMutationRequest, BuildContextMutationResponse, BuildContextPathParams } from "./BuildContext.js";
-export type { ContextBody, ContextBodyStrategyEnumKey } from "./ContextBody.js";
-export type { ContextChunk } from "./ContextChunk.js";
-export type { ContextPackResult } from "./ContextPackResult.js";
 export type { CreateRepo201, CreateRepo400, CreateRepo409, CreateRepoMutation, CreateRepoMutationRequest, CreateRepoMutationResponse } from "./CreateRepo.js";
 export type { CreateRepoBody } from "./CreateRepoBody.js";
 export type { DeleteRepo204, DeleteRepo404, DeleteRepoMutation, DeleteRepoMutationResponse, DeleteRepoPathParams } from "./DeleteRepo.js";
@@ -39,7 +35,6 @@ export type { SyncRepo202, SyncRepo400, SyncRepo404, SyncRepo503, SyncRepoMutati
 export type { SyncResponse } from "./SyncResponse.js";
 export type { UpdateRepo200, UpdateRepo400, UpdateRepo404, UpdateRepoMutation, UpdateRepoMutationRequest, UpdateRepoMutationResponse, UpdateRepoPathParams } from "./UpdateRepo.js";
 export type { UpdateRepoBody } from "./UpdateRepoBody.js";
-export { contextBodyStrategyEnum } from "./ContextBody.js";
 export { findQueryParamsKindEnum } from "./Find.js";
 export { embedderStatusEnum } from "./HealthResponse.js";
 export { healthResponseStatusEnum } from "./HealthResponse.js";

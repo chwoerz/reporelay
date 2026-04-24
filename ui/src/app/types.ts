@@ -15,8 +15,6 @@ export type { SymbolDetail } from '@api/SymbolDetail';
 export type { SymbolLookup } from '@api/SymbolLookup';
 export type { FindResult } from '@api/FindResult';
 export type { ImportReference } from '@api/ImportReference';
-export type { ContextChunk } from '@api/ContextChunk';
-export type { ContextPackResult } from '@api/ContextPackResult';
 export type { GitRefs } from '@api/GitRefs';
 export type { IndexingProgress } from '@api/IndexingProgress';
 export type { IndexingStage } from '@api/IndexingStage';

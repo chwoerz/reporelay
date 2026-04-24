@@ -62,28 +62,6 @@ export const SEARCH_RESULTS = [
   },
 ];
 
-export const CONTEXT_PACK_RESULT = {
-  strategy: "explain",
-  repo: "acme-api",
-  ref: "main",
-  totalTokens: 2048,
-  chunks: [
-    {
-      filePath: "src/index.ts",
-      startLine: 1,
-      endLine: 50,
-      annotation: "entry point",
-    },
-    {
-      filePath: "src/routes.ts",
-      startLine: 10,
-      endLine: 30,
-      annotation: null,
-    },
-  ],
-  formatted: "// src/index.ts\nexport function hello() { return 'world'; }",
-};
-
 export const FILE_TREE = [
   "src/index.ts",
   "src/routes.ts",
@@ -220,11 +198,6 @@ export async function mockApi(page: Page) {
     await route.fulfill({ json: GIT_REFS });
   });
 
-  // POST /api/repos/:name/context
-  await page.route("**/api/repos/*/context", async (route) => {
-    await route.fulfill({ json: CONTEXT_PACK_RESULT });
-  });
-
   // GET /api/repos/:name/refs/:ref/tree
   await page.route("**/api/repos/*/refs/*/tree", async (route) => {
     await route.fulfill({ json: FILE_TREE });
@@ -298,7 +271,7 @@ export const loc = {
 
 /**
  * Fill the ref-picker autocomplete and blur to emit the selected value.
- * Reused in repo-detail (sync) and context-builder pages.
+ * Reused in repo-detail (sync) pages.
  */
 export async function fillRefPicker(page: Page, value: string) {
   const input = loc.refPickerInput(page);
@@ -309,7 +282,7 @@ export async function fillRefPicker(page: Page, value: string) {
 /**
  * Override an API route to return an error, then perform a form action
  * and assert the error message appears. Useful for the identical
- * error-state tests across search, context-builder, repo-detail, etc.
+ * error-state tests across search, repo-detail, etc.
  */
 export async function expectApiError(opts: {
   page: Page;

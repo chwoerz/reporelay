@@ -57,13 +57,6 @@
     <p class="glob-hint">Comma-separated glob patterns to filter indexed files. Leave empty to index all files.</p>
   </div>
 
-  <!-- Quick actions -->
-  <div class="quick-actions">
-    <a class="btn btn-outline" [routerLink]="['/', r.name, 'context']">
-      <span class="mi">psychology</span> Context Builder
-    </a>
-  </div>
-
   <!-- Sync form -->
   @if (r.mirrorStatus === 'cloning') {
     <div class="cloning-detail-banner">

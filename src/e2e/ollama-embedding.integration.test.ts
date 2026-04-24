@@ -10,7 +10,6 @@
  *   5. Assert: hybrid search (BM25 + vector) returns semantically relevant results
  *   6. Assert: vector-only search ranks related code higher than unrelated code
  *   7. Assert: re-index of new ref updates embeddings correctly
- *   8. Assert: context builder works with real embeddings
  *
  * Requires:
  *   - Docker (for testcontainers ParadeDB)
@@ -37,7 +36,6 @@ import { OllamaEmbedder, DB_EMBEDDING_DIMENSIONS } from "../indexer/embedder.js"
 import { runPipeline } from "../indexer/pipeline.js";
 import { listFiles } from "../git/git-sync.js";
 import { searchHybrid } from "../retrieval/index.js";
-import { buildContextPack } from "../retrieval/index.js";
 
 const OLLAMA_URL = "http://localhost:11434";
 const EMBEDDING_MODEL = "nomic-embed-text";
@@ -512,33 +510,7 @@ export class AuthService {
     });
   });
 
-  //  5. Context builder with real embeddings
-
-  describe("context builder: assembles context packs with real embeddings", () => {
-    it("builds an 'explain' context pack with semantically relevant chunks", async () => {
-      if (!ollamaAvailable) return;
-
-      const pack = await buildContextPack(db, embedder, {
-        repo: repo.name,
-        repoId: repoRow.id,
-        strategy: "explain",
-        ref: "v1.0.0",
-        query: "How does the service start and stop?",
-        maxTokens: 4000,
-      });
-
-      expect(pack.strategy).toBe("explain");
-      expect(pack.chunks.length).toBeGreaterThan(0);
-      expect(pack.totalTokens).toBeGreaterThan(0);
-      expect(pack.totalTokens).toBeLessThanOrEqual(4000);
-
-      // Should include content from the TypeScript service file
-      const tsChunks = pack.chunks.filter((c) => c.filePath === "src/service.ts");
-      expect(tsChunks.length).toBeGreaterThan(0);
-    });
-  });
-
-  //  6. BM25 + Vector fusion — both contribute to results
+  //  5. BM25 + Vector fusion — both contribute to results
 
   describe("RRF fusion: BM25 and vector scores both contribute", () => {
     it("FTS-heavy query (exact symbol name) returns relevant results", async () => {

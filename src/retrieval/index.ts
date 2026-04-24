@@ -10,11 +10,3 @@ export {
   type HybridSearchOptions,
   type RewrittenQuery,
 } from "./hybrid-search.js";
-
-export {
-  buildContextPack,
-  formatContextPack,
-  type ContextPackInput,
-  type ContextPack,
-  type ContextChunk,
-} from "./context-builder.js";

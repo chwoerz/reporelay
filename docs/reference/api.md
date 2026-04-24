@@ -1,6 +1,6 @@
 # REST API Reference
 
-RepoRelay exposes 20 REST API routes via Fastify 5 with full OpenAPI 3.1 documentation.
+RepoRelay exposes 19 REST API routes via Fastify 5 with full OpenAPI 3.1 documentation.
 Interactive Swagger UI is available at `/docs` when the web server is running.
 
 ## Base URL
@@ -294,28 +294,6 @@ Find files that import a given symbol.
 
 ---
 
-### `POST /api/repos/:name/context`
-
-Build a task-specific context pack from indexed code.
-
-| Parameter | Type   | In   | Required | Description     |
-| --------- | ------ | ---- | -------- | --------------- |
-| `name`    | string | path | yes      | Repository name |
-
-**Request Body:**
-| Field | Type | Required | Description |
-|------------|----------|----------|----------------------------------------------------------|
-| `strategy` | string | yes | `"explain"`, `"implement"`, `"debug"`, `"recent-changes"` |
-| `ref` | string | no | Ref/tag (supports semver constraints) |
-| `fromRef` | string | no | Base ref for `recent-changes` strategy |
-| `query` | string | no | Guiding query for context gathering |
-| `paths` | string[] | no | Specific file paths to focus on |
-| `maxTokens`| integer | no | Token budget (must be > 0) |
-
-**Response:** `200` — [`ContextPackResult`](#contextpackresult)
-
----
-
 ## Response Schemas
 
 ### Repo
@@ -494,31 +472,6 @@ One of: `queued`, `syncing`, `resolving`, `checking-out`, `diffing`, `processing
   "startLine": 15,
   "endLine": 42,
   "signature": "login(username: string, password: string): Promise<User>"
-}
-```
-
-### ContextChunk
-
-```json
-{
-  "filePath": "src/auth/login.ts",
-  "startLine": 1,
-  "endLine": 50,
-  "content": "// Full file content...",
-  "annotation": "Authentication entry point"
-}
-```
-
-### ContextPackResult
-
-```json
-{
-  "strategy": "explain",
-  "repo": "my-lib",
-  "ref": "v1.0.0",
-  "totalTokens": 4200,
-  "chunks": [{ "...ContextChunk" }],
-  "formatted": "## File: src/auth/login.ts (lines 1-50)\n..."
 }
 ```
 

@@ -76,7 +76,7 @@ Per-request `languages` values provided by the caller always take priority over 
 
 The `--server` CLI argument takes priority over `REPORELAY_URL`.
 
-## Tools (7)
+## Tools (6)
 
 | Tool                     | Description                                                                                   |
 | :----------------------- | :-------------------------------------------------------------------------------------------- |
@@ -85,7 +85,6 @@ The `--server` CLI argument takes priority over `REPORELAY_URL`.
 | **`get_symbol`**         | Fetch a specific symbol (function, class, etc.); optionally show dependency graph             |
 | **`find`**               | Search for files or symbols by name/path pattern (`kind: "file" \| "symbol"`, glob wildcards) |
 | **`find_references`**    | Find all references to a symbol across the indexed codebase                                   |
-| **`build_context_pack`** | Build task-specific context: `explain` / `implement` / `debug` / `recent-changes`             |
 | **`list_repos`**         | List registered repositories, their indexing status, and indexed versions                     |
 
 > Tools that accept `ref` also support semver constraints for indexed tags: `^1.2`, `~1.0`, `2.x`
@@ -108,14 +107,6 @@ When the MCP proxy is used, detected languages are automatically injected into t
 | :------------- | :------------------------------------------ | :-------------------- |
 | File Content   | `reporelay://{repo}/{ref}/{path}`           | Read any indexed file |
 | Directory Tree | `reporelay://{repo}/{ref}/tree[/{subtree}]` | Browse the file tree  |
-
-## Prompts
-
-| Prompt                  | Description                                                            |
-| :---------------------- | :--------------------------------------------------------------------- |
-| **`explain-library`**   | Understand how a library or module works with relevant code context    |
-| **`implement-feature`** | Get implementation guidance based on existing patterns in the codebase |
-| **`debug-issue`**       | Debug an error with relevant code context pulled automatically         |
 
 ## Connecting Clients
 

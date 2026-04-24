@@ -521,46 +521,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  # ── Context Builder ──
-  /api/repos/{name}/context:
-    post:
-      operationId: buildContext
-      summary: Build a context pack
-      tags: [context]
-      parameters:
-        - $ref: "#/components/parameters/repoName"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ContextBody"
-      responses:
-        "200":
-          description: Context pack result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContextPackResult"
-        "400":
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Repository not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "503":
-          description: Embedder not configured
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
 components:
   parameters:
     repoName:
@@ -884,58 +844,3 @@ components:
         signature:
           type: string
 
-    # ── Context ──
-    ContextBody:
-      type: object
-      required: [strategy]
-      properties:
-        strategy:
-          type: string
-          enum: [explain, implement, debug, recent-changes]
-        ref:
-          type: string
-        fromRef:
-          type: string
-        query:
-          type: string
-        paths:
-          type: array
-          items:
-            type: string
-        maxTokens:
-          type: integer
-          exclusiveMinimum: 0
-
-    ContextChunk:
-      type: object
-      required: [filePath, startLine, endLine, content]
-      properties:
-        filePath:
-          type: string
-        startLine:
-          type: integer
-        endLine:
-          type: integer
-        content:
-          type: string
-        annotation:
-          type: string
-
-    ContextPackResult:
-      type: object
-      required: [strategy, repo, totalTokens, chunks, formatted]
-      properties:
-        strategy:
-          type: string
-        repo:
-          type: string
-        ref:
-          type: string
-        totalTokens:
-          type: integer
-        chunks:
-          type: array
-          items:
-            $ref: "#/components/schemas/ContextChunk"
-        formatted:
-          type: string

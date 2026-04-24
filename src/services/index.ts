@@ -8,7 +8,6 @@ export {
   getSymbol,
   findByPattern,
   findReferences,
-  buildContext,
   searchCode,
   listReposWithRefs,
   listFilePaths,
