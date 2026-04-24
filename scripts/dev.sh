@@ -86,6 +86,32 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
+# Wait for worker to log its ready line.
+# Worker has no HTTP endpoint, so we grep its log for the readiness marker.
+echo -n "Waiting for worker to start "
+for i in $(seq 1 30); do
+  if grep -q "Worker ready" "$WORKER_LOG" 2>/dev/null; then
+    echo -e " ${GREEN}ready${NC}"
+    break
+  fi
+  if grep -q "Worker failed to start" "$WORKER_LOG" 2>/dev/null \
+     || ! kill -0 "$WORKER_PID" 2>/dev/null; then
+    echo -e " ${RED}failed${NC}"
+    echo -e "${RED}Last lines of $WORKER_LOG:${NC}"
+    tail -n 10 "$WORKER_LOG" || true
+    kill "$WEB_PID" "$MCP_PID" "$UI_PID" 2>/dev/null || true
+    pkill -f "tsx.*src/web/main.ts" 2>/dev/null || true
+    pkill -f "tsx.*src/mcp/main.ts" 2>/dev/null || true
+    pkill -f "ng serve" 2>/dev/null || true
+    exit 1
+  fi
+  echo -n "."
+  sleep 1
+  if [ "$i" -eq 30 ]; then
+    echo -e " ${RED}timed out (check $WORKER_LOG)${NC}"
+  fi
+done
+
 # Wait for web server to be ready before printing the banner
 echo -n "Waiting for API to start "
 for i in $(seq 1 30); do

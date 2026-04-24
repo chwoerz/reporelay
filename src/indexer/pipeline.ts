@@ -1,11 +1,7 @@
 /**
- * Indexing pipeline orchestrator.
- *
- * Takes a checked-out worktree path + file list and produces stored
- * file_contents, ref_files, symbols, chunks with embeddings.
- *
- * Designed to be called by the pg-boss job handler.
- * Git sync / worktree checkout happen externally.
+ * Takes a checked-out worktree + file list, produces file_contents,
+ * ref_files, symbols, and embedded chunks. Git sync / worktree checkout
+ * happen externally — this runs from the pg-boss job handler.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -24,7 +20,7 @@ import {
 import { buildIgnoreFilterFromRepo, classifyLanguage, filterIgnored } from "../git/index.js";
 import { parse } from "../parser/index.js";
 import { chunkFile, type ChunkOutput } from "./chunker.js";
-import { type Embedder, type EmbedBatchResult, embedInBatches } from "./embedder.js";
+import { type Embedder, embedInBatches } from "./embedder.js";
 import type { Language, LanguageStats, ParsedImport, ParsedSymbol } from "../core/types.js";
 
 /** Thrown when the pipeline detects that the ref was deleted mid-run. */
@@ -35,33 +31,29 @@ export class PipelineCancelledError extends Error {
   }
 }
 
-/** Default maximum file size in bytes (1 MB). Files larger than this are skipped. */
-export const DEFAULT_MAX_FILE_SIZE = 1024 * 1024;
+/**
+ * Cost scales linearly — the worker holds several copies of a file in
+ * memory at once during parse+chunk+embed. Raise carefully.
+ */
+export const DEFAULT_MAX_FILE_SIZE = 3 * 1024 * 1024;
 
-/** Default maximum average line length. Files above this are likely minified/generated. */
+/** Above this, files are treated as minified/generated and skipped. */
 export const DEFAULT_MAX_AVG_LINE_LENGTH = 500;
 
 export interface PipelineOptions {
-  /** Drizzle DB instance */
   db: Db;
-  /** Embedding provider */
   embedder: Embedder;
-  /** Embedding batch size */
   embeddingBatchSize?: number;
-  /** Chunker max tokens */
+  embeddingConcurrency?: number;
   maxTokensPerChunk?: number;
-  /** Max file size in bytes. Files larger are skipped. Default: 1 MB */
   maxFileSize?: number;
-  /** Max average line length (chars). Files above are treated as minified/generated and skipped. Default: 500 */
   maxAvgLineLength?: number;
 }
 
 export interface PipelineInput {
-  /** Path to the checked-out worktree */
   worktreePath: string;
-  /** Repo ref ID (already created in DB) */
   repoRefId: number;
-  /** All file paths to index (from `git ls-tree`) */
+  /** From `git ls-tree`. */
   files: string[];
 }
 
@@ -70,9 +62,22 @@ export type PipelineProgressEvent =
   | { type: "file-done"; path: string; filesProcessed: number; filesTotal: number }
   | { type: "file-skipped"; path: string; reason: FileSkipReason }
   | { type: "file-error"; path: string; error: string }
+  /**
+   * After persistence, before embedding. `chunksRepair` covers pre-existing
+   * chunks with NULL embedding (prior crashed/incomplete run).
+   */
+  | {
+      type: "dedup-summary";
+      filesNew: number;
+      filesReused: number;
+      chunksNew: number;
+      chunksRepair: number;
+    }
   | { type: "embedding-start"; chunksTotal: number }
   | { type: "embedding-batch-done"; chunksEmbedded: number; chunksTotal: number }
   | { type: "embedding-failures"; failures: { chunkId: number; filePath: string; error: string }[] }
+  /** Chunks reused from the content-sha256 cache vs. what still needs the embedder. */
+  | { type: "chunk-cache"; chunksReused: number; chunksToEmbed: number }
   | { type: "finalizing" };
 
 export type PipelineProgressCallback = (event: PipelineProgressEvent) => void;
@@ -86,13 +91,12 @@ interface TxRepos {
   imp: ImportRepository;
 }
 
-/** Reasons a file may be skipped during indexing. */
 export type FileSkipReason = "too-large" | "minified-or-generated" | "read-error" | "parse-error";
 
 interface NewChunkRow {
   chunkId: number;
   content: string;
-  /** Source file path — carried through so embedding failures can report which file. */
+  contentSha256: string;
   filePath: string;
 }
 
@@ -100,20 +104,14 @@ function sha256(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
 }
 
-/**
- * Check whether a file's content should be skipped.
- * Returns a skip reason or `null` if the file is OK to index.
- */
 export function shouldSkipFile(
   content: string,
   maxFileSize: number,
   maxAvgLineLength: number,
 ): FileSkipReason | null {
-  // Check byte size (Buffer.byteLength is accurate for UTF-8)
   if (Buffer.byteLength(content, "utf-8") > maxFileSize) {
     return "too-large";
   }
-  // Check average line length to detect minified / generated files
   const lines = content.split("\n");
   if (lines.length > 0) {
     const avgLineLen = content.length / lines.length;
@@ -136,7 +134,6 @@ function createTxRepos(tx: unknown): TxRepos {
   };
 }
 
-/** Filter changed paths through gitignore and classify to supported languages. */
 async function filterSupportedFiles(
   worktreePath: string,
   changed: string[],
@@ -148,7 +145,6 @@ async function filterSupportedFiles(
     .filter((f): f is { path: string; language: Language } => f.language != null);
 }
 
-/** Read a file's content, returning null if unreadable (binary, missing). */
 async function readFileContent(worktreePath: string, filePath: string): Promise<string | null> {
   try {
     return sanitizeUtf8BufferForPostgres(await readFile(join(worktreePath, filePath)));
@@ -157,13 +153,12 @@ async function readFileContent(worktreePath: string, filePath: string): Promise<
   }
 }
 
+// Postgres text columns reject NUL bytes even in otherwise-valid UTF-8.
 function sanitizeUtf8BufferForPostgres(buf: Buffer): string {
-  // Fast path: no NUL byte, decode once and return
   if (buf.indexOf(0x00) === -1) {
     return buf.toString("utf8");
   }
 
-  // Slow path: allocate only when needed
   const out = Buffer.allocUnsafe(buf.length);
   let j = 0;
 
@@ -177,7 +172,7 @@ function sanitizeUtf8BufferForPostgres(buf: Buffer): string {
   return out.subarray(0, j).toString("utf8");
 }
 
-/** Find a symbol ID by name (ignoring startLine, for split chunks). */
+// For chunks split off the primary symbol window — match on name only.
 function findSymbolIdByName(map: Map<string, number>, name: string): number | undefined {
   for (const [key, id] of map) {
     if (key.startsWith(`${name}:`)) return id;
@@ -185,7 +180,6 @@ function findSymbolIdByName(map: Map<string, number>, name: string): number | un
   return undefined;
 }
 
-/** Resolve the best-matching symbol ID for a chunk. */
 function resolveSymbolId(symbolIdMap: Map<string, number>, co: ChunkOutput): number | null {
   if (!co.symbolName) return null;
   return (
@@ -195,198 +189,298 @@ function resolveSymbolId(symbolIdMap: Map<string, number>, co: ChunkOutput): num
   );
 }
 
-/** Store parsed symbols and return a name:startLine → id lookup map. */
-async function storeSymbols(
-  repo: SymbolRepository,
-  fileContentId: number,
-  symbols: ParsedSymbol[],
-): Promise<Map<string, number>> {
-  const entries = await Promise.all(
-    symbols.map(async (sym) => {
-      const stored = await repo.insertOne({
-        fileContentId,
-        name: sym.name,
-        kind: sym.kind,
-        signature: sym.signature,
-        startLine: sym.startLine,
-        endLine: sym.endLine,
-        documentation: sym.documentation,
-      });
-      return [`${sym.name}:${sym.startLine}`, stored.id] as const;
-    }),
-  );
-  return new Map(entries);
+/** All CPU/IO work producing this runs outside the DB transaction. */
+interface PreparedFile {
+  file: { path: string; language: Language };
+  hash: string;
+  symbols: ParsedSymbol[];
+  imports: ParsedImport[];
+  chunkOutputs: ChunkOutput[];
 }
 
-/** Store chunks and collect rows that need embedding. */
-async function storeChunks(
-  repo: ChunkRepository,
-  fileContentId: number,
-  chunkOutputs: ChunkOutput[],
-  symbolIdMap: Map<string, number>,
-  filePath: string,
-): Promise<NewChunkRow[]> {
-  return Promise.all(
-    chunkOutputs.map(async (co) => {
-      const stored = await repo.insertOne({
-        fileContentId,
-        symbolId: resolveSymbolId(symbolIdMap, co),
+type PrepareOutcome =
+  | { kind: "prepared"; prepared: PreparedFile }
+  | { kind: "skipped"; path: string; reason: FileSkipReason }
+  | { kind: "error"; path: string; error: string };
+
+async function prepareFile(
+  worktreePath: string,
+  file: { path: string; language: Language },
+  maxFileSize: number,
+  maxAvgLineLength: number,
+  maxTokens: number | undefined,
+): Promise<PrepareOutcome> {
+  const content = await readFileContent(worktreePath, file.path);
+  if (content === null) return { kind: "skipped", path: file.path, reason: "read-error" };
+
+  const skipReason = shouldSkipFile(content, maxFileSize, maxAvgLineLength);
+  if (skipReason) return { kind: "skipped", path: file.path, reason: skipReason };
+
+  try {
+    const hash = sha256(content);
+    const { symbols, imports } = parse(content, file.language, file.path);
+    const chunkOutputs = chunkFile(content, symbols, imports, {
+      maxTokens,
+      language: file.language,
+    });
+    return { kind: "prepared", prepared: { file, hash, symbols, imports, chunkOutputs } };
+  } catch (err) {
+    return {
+      kind: "error",
+      path: file.path,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+interface PersistBatchResult {
+  chunks: NewChunkRow[];
+  filesNew: number;
+  filesReused: number;
+  chunksNew: number;
+  chunksRepair: number;
+}
+
+async function persistBatch(
+  repos: TxRepos,
+  prepared: PreparedFile[],
+  repoRefId: number,
+): Promise<PersistBatchResult> {
+  if (prepared.length === 0)
+    return { chunks: [], filesNew: 0, filesReused: 0, chunksNew: 0, chunksRepair: 0 };
+
+  // 1. Look up which hashes already have file_contents rows.
+  const uniqueHashes = [...new Set(prepared.map((p) => p.hash))];
+  const existing = await repos.fc.findManyBySha256(uniqueHashes);
+  const fcIdByHash = new Map<string, number>(existing.map((fc) => [fc.sha256, fc.id]));
+
+  // 2. Bulk-insert file_contents for hashes not already present.
+  //    Dedup by hash within the batch so two identical files share one FC row.
+  const toInsertFCs: { sha256: string; language: Language }[] = [];
+  const seenNewHashes = new Set<string>();
+  for (const p of prepared) {
+    if (fcIdByHash.has(p.hash) || seenNewHashes.has(p.hash)) continue;
+    seenNewHashes.add(p.hash);
+    toInsertFCs.push({ sha256: p.hash, language: p.file.language });
+  }
+  const insertedFCs = await repos.fc.insertMany(toInsertFCs);
+  for (const fc of insertedFCs) fcIdByHash.set(fc.sha256, fc.id);
+
+  // 3. Bulk-upsert ref_files for every prepared file.
+  //    Dedupe by path within the batch (last-write-wins, matches prior per-row semantics).
+  const refFileRowsByPath = new Map<
+    string,
+    { repoRefId: number; fileContentId: number; path: string }
+  >();
+  for (const p of prepared) {
+    const fcId = fcIdByHash.get(p.hash)!;
+    refFileRowsByPath.set(p.file.path, { repoRefId, fileContentId: fcId, path: p.file.path });
+  }
+  await repos.rf.upsertManyByRefAndPath([...refFileRowsByPath.values()]);
+
+  // 4. Partition prepared files: those whose FC was newly inserted need
+  //    symbols/imports/chunks written; existing FCs only need a check for
+  //    unembedded chunks (self-repair for crashed runs).
+  const newFcIds = new Set(insertedFCs.map((fc) => fc.id));
+  const newFiles: PreparedFile[] = [];
+  const existingFcIds = new Set<number>();
+  const filePathByFcId = new Map<number, string>();
+  for (const p of prepared) {
+    const fcId = fcIdByHash.get(p.hash)!;
+    filePathByFcId.set(fcId, p.file.path);
+    if (newFcIds.has(fcId)) {
+      // Only write symbols/chunks once per unique new FC (first prepared file wins).
+      if (!newFiles.some((n) => fcIdByHash.get(n.hash) === fcId)) newFiles.push(p);
+    } else {
+      existingFcIds.add(fcId);
+    }
+  }
+
+  // 5. Bulk-insert symbols for all new files, then build per-FC name→id lookup.
+  const allSymbolRows = newFiles.flatMap((p) => {
+    const fcId = fcIdByHash.get(p.hash)!;
+    return p.symbols.map((sym) => ({
+      fileContentId: fcId,
+      name: sym.name,
+      kind: sym.kind,
+      signature: sym.signature,
+      startLine: sym.startLine,
+      endLine: sym.endLine,
+      documentation: sym.documentation,
+    }));
+  });
+  const insertedSymbols = await repos.sym.insertMany(allSymbolRows);
+  const symbolIdMapByFcId = new Map<number, Map<string, number>>();
+  for (const s of insertedSymbols) {
+    let m = symbolIdMapByFcId.get(s.fileContentId);
+    if (!m) {
+      m = new Map();
+      symbolIdMapByFcId.set(s.fileContentId, m);
+    }
+    m.set(`${s.name}:${s.startLine}`, s.id);
+  }
+
+  // 6. Bulk-insert imports for all new files.
+  const allImportRows = newFiles.flatMap((p) => {
+    const fcId = fcIdByHash.get(p.hash)!;
+    return p.imports.map((imp) => ({
+      fileContentId: fcId,
+      source: imp.source,
+      names: imp.names,
+      defaultName: imp.defaultName,
+      isNamespace: imp.isNamespace ? 1 : 0,
+    }));
+  });
+  if (allImportRows.length > 0) await repos.imp.insertMany(allImportRows);
+
+  // 7. Bulk-insert chunks for all new files, carrying through the content + path
+  //    so embedding failures can be attributed later. `content_sha256` enables
+  //    chunk-level embedding reuse across files/refs (see embedNewChunks).
+  const chunkInsertPayload: {
+    fileContentId: number;
+    symbolId: number | null;
+    content: string;
+    contentSha256: string;
+    startLine: number;
+    endLine: number;
+  }[] = [];
+  const chunkMeta: { filePath: string }[] = [];
+  for (const p of newFiles) {
+    const fcId = fcIdByHash.get(p.hash)!;
+    const symMap = symbolIdMapByFcId.get(fcId) ?? new Map<string, number>();
+    for (const co of p.chunkOutputs) {
+      chunkInsertPayload.push({
+        fileContentId: fcId,
+        symbolId: resolveSymbolId(symMap, co),
         content: co.content,
+        contentSha256: sha256(co.content),
         startLine: co.startLine,
         endLine: co.endLine,
       });
-      return { chunkId: stored.id, content: co.content, filePath };
-    }),
-  );
+      chunkMeta.push({ filePath: p.file.path });
+    }
+  }
+  const insertedChunks = await repos.chunk.insertMany(chunkInsertPayload);
+  const newChunks: NewChunkRow[] = insertedChunks.map((c, i) => ({
+    chunkId: c.id,
+    content: c.content,
+    contentSha256: c.contentSha256!,
+    filePath: chunkMeta[i]!.filePath,
+  }));
+  const chunksNew = newChunks.length;
+  let chunksRepair = 0;
+
+  // 8. Self-repair: for existing FCs, re-embed any chunks missing an embedding.
+  //    These rows already have content_sha256 (backfill on startup); fall back
+  //    to hashing on-the-fly for rows predating the backfill.
+  if (existingFcIds.size > 0) {
+    const unembedded = await repos.chunk.findUnembeddedByFileContentIds([...existingFcIds]);
+    chunksRepair = unembedded.length;
+    for (const c of unembedded) {
+      newChunks.push({
+        chunkId: c.id,
+        content: c.content,
+        contentSha256: c.contentSha256 ?? sha256(c.content),
+        filePath: filePathByFcId.get(c.fileContentId) ?? "",
+      });
+    }
+  }
+
+  return {
+    chunks: newChunks,
+    filesNew: newFcIds.size,
+    filesReused: existingFcIds.size,
+    chunksNew,
+    chunksRepair,
+  };
 }
 
-/** Store parsed imports for a file. */
-async function storeImports(
-  repo: ImportRepository,
-  fileContentId: number,
-  parsedImports: ParsedImport[],
-): Promise<void> {
-  if (parsedImports.length === 0) return;
-  await Promise.all(
-    parsedImports.map((imp) =>
-      repo.insertOne({
-        fileContentId,
-        source: imp.source,
-        names: imp.names,
-        defaultName: imp.defaultName,
-        isNamespace: imp.isNamespace ? 1 : 0,
-      }),
-    ),
-  );
-}
-
-/** Parse, chunk, and store a brand-new file. Returns chunks needing embedding. */
-async function indexNewFile(
-  repos: TxRepos,
-  opts: {
-    content: string;
-    hash: string;
-    file: { path: string; language: Language };
-    repoRefId: number;
-    maxTokens?: number;
-  },
+/**
+ * Chunk-level embedding cache: for any chunk whose `content_sha256` already
+ * exists (with an embedding) on another chunk, copy the vector in-place and
+ * drop the chunk from the list passed to the embedding provider.
+ *
+ * This is the hot path when bumping a ref across versions — most functions
+ * don't change even when a file's overall sha does, so we avoid re-embedding
+ * the unchanged bulk. Returns the chunks that still need embedding.
+ */
+async function applyChunkEmbeddingCache(
+  chunkRepo: ChunkRepository,
+  newChunkRows: NewChunkRow[],
+  onProgress?: PipelineProgressCallback,
 ): Promise<NewChunkRow[]> {
-  const { content, hash, file, repoRefId, maxTokens } = opts;
-  const fc = await repos.fc.insertOne({ sha256: hash, language: file.language });
-  await repos.rf.upsertByRefAndPath({ repoRefId, fileContentId: fc.id, path: file.path });
+  if (newChunkRows.length === 0) return newChunkRows;
 
-  const { symbols, imports } = parse(content, file.language, file.path);
-  const [symbolIdMap] = await Promise.all([
-    storeSymbols(repos.sym, fc.id, symbols),
-    storeImports(repos.imp, fc.id, imports),
-  ]);
-  const chunkOutputs = chunkFile(content, symbols, imports, { maxTokens });
-  return storeChunks(repos.chunk, fc.id, chunkOutputs, symbolIdMap, file.path);
-}
+  const hashes = newChunkRows.map((r) => r.contentSha256);
+  const cache = await chunkRepo.findEmbeddingsByContentSha256(hashes);
 
-/** Process a single file: dedup by SHA-256 or index as new. */
-async function processFile(
-  repos: TxRepos,
-  opts: {
-    worktreePath: string;
-    file: { path: string; language: Language };
-    repoRefId: number;
-    maxTokens?: number;
-    maxFileSize?: number;
-    maxAvgLineLength?: number;
-  },
-): Promise<{ chunks: NewChunkRow[]; skipped?: { path: string; reason: FileSkipReason } }> {
-  const {
-    worktreePath,
-    file,
-    repoRefId,
-    maxTokens,
-    maxFileSize = DEFAULT_MAX_FILE_SIZE,
-    maxAvgLineLength = DEFAULT_MAX_AVG_LINE_LENGTH,
-  } = opts;
-  const content = await readFileContent(worktreePath, file.path);
-  if (content === null) return { chunks: [], skipped: { path: file.path, reason: "read-error" } };
-
-  const skipReason = shouldSkipFile(content, maxFileSize, maxAvgLineLength);
-  if (skipReason) {
-    return { chunks: [], skipped: { path: file.path, reason: skipReason } };
+  const copies: { id: number; embedding: number[] }[] = [];
+  const remaining: NewChunkRow[] = [];
+  for (const row of newChunkRows) {
+    const hit = cache.get(row.contentSha256);
+    if (hit) {
+      copies.push({ id: row.chunkId, embedding: hit });
+    } else {
+      remaining.push(row);
+    }
   }
 
-  const hash = sha256(content);
-  const existing = await repos.fc.findBySha256(hash);
-
-  if (existing) {
-    await repos.rf.upsertByRefAndPath({ repoRefId, fileContentId: existing.id, path: file.path });
-    // Check if chunks from a previous (possibly failed) run are missing embeddings.
-    // If so, collect them for re-embedding so a crashed run can self-repair.
-    const existingChunks = await repos.chunk.findByFileContentId(existing.id);
-    const unembedded = existingChunks
-      .filter((c) => c.embedding == null)
-      .map((c) => ({ chunkId: c.id, content: c.content, filePath: file.path }));
-    return { chunks: unembedded };
+  if (copies.length > 0) {
+    await chunkRepo.updateEmbeddingsBatch(
+      copies.map(({ id, embedding }) => ({ id, embedding, embeddingError: null })),
+    );
   }
-  const chunks = await indexNewFile(repos, { content, hash, file, repoRefId, maxTokens });
-  return { chunks };
+
+  onProgress?.({
+    type: "chunk-cache",
+    chunksReused: copies.length,
+    chunksToEmbed: remaining.length,
+  });
+
+  return remaining;
 }
 
-/** Embed all new chunks and persist the vectors (or record failures). */
 async function embedNewChunks(opts: {
   embedder: Embedder;
   chunkRepo: ChunkRepository;
   newChunkRows: NewChunkRow[];
   batchSize: number;
+  concurrency: number;
   onProgress?: PipelineProgressCallback;
-  /** Repo ref ID — used for cancellation checks between batches. */
   repoRefId: number;
-  /** DB instance — used for cancellation checks. */
   db: Db;
 }): Promise<void> {
-  const { embedder, chunkRepo, newChunkRows, batchSize, onProgress, repoRefId, db } = opts;
+  const { embedder, chunkRepo, newChunkRows, batchSize, concurrency, onProgress, repoRefId, db } =
+    opts;
   if (newChunkRows.length === 0) return;
 
   onProgress?.({ type: "embedding-start", chunksTotal: newChunkRows.length });
 
   const texts = newChunkRows.map((r) => r.content);
-  // Embed in batches and report progress per batch
-  let embedded = 0;
-  const allResults: EmbedBatchResult = { embeddings: [], failures: [] };
-  for (let i = 0; i < texts.length; i += batchSize) {
-    // Check for cancellation between embedding batches
-    if (i > 0) await assertRefExists(db, repoRefId);
+  // onWaveDone checks cancellation between waves so we don't duplicate the wave loop here.
+  const results = await embedInBatches(
+    embedder,
+    texts,
+    batchSize,
+    concurrency,
+    async (completed, total) => {
+      await assertRefExists(db, repoRefId);
+      onProgress?.({ type: "embedding-batch-done", chunksEmbedded: completed, chunksTotal: total });
+    },
+  );
 
-    const batch = texts.slice(i, i + batchSize);
-    const batchResult = await embedInBatches(embedder, batch, batchSize);
-
-    // Re-map failure indices from batch-local to global
-    const globalFailures = batchResult.failures.map((f) => ({
-      index: f.index + i,
-      error: f.error,
-    }));
-    allResults.embeddings.push(...batchResult.embeddings);
-    allResults.failures.push(...globalFailures);
-
-    embedded += batch.length;
-    onProgress?.({
-      type: "embedding-batch-done",
-      chunksEmbedded: embedded,
-      chunksTotal: newChunkRows.length,
-    });
-  }
-
-  // Build update list — `null` embeddings keep the column NULL and get an error reason
   const updates = newChunkRows.map((r, i) => {
-    const failure = allResults.failures.find((f) => f.index === i);
+    const failure = results.failures.find((f) => f.index === i);
     return {
       id: r.chunkId,
-      embedding: allResults.embeddings[i] ?? null,
+      embedding: results.embeddings[i] ?? null,
       embeddingError: failure?.error ?? null,
     };
   });
   await chunkRepo.updateEmbeddingsBatch(updates);
 
-  // Notify callers about failures so they can log / surface them
-  if (allResults.failures.length > 0) {
-    const failedChunks = allResults.failures.map((f) => ({
+  if (results.failures.length > 0) {
+    const failedChunks = results.failures.map((f) => ({
       chunkId: newChunkRows[f.index]!.chunkId,
       filePath: newChunkRows[f.index]!.filePath,
       error: f.error,
@@ -395,10 +489,6 @@ async function embedNewChunks(opts: {
   }
 }
 
-/**
- * Compute language percentage breakdown from a list of files with languages.
- * Returns a map of language → percentage (0–100, rounded to 1 decimal).
- */
 function computeLanguageStats(files: { language: Language }[]): LanguageStats {
   if (files.length === 0) return {};
 
@@ -415,13 +505,9 @@ function computeLanguageStats(files: { language: Language }[]): LanguageStats {
   return stats;
 }
 
-/** Default file batch size for per-transaction commits. */
 const FILE_BATCH_SIZE = 50;
 
-/**
- * Check if the repo_ref row still exists in the DB.
- * Throws PipelineCancelledError if it was deleted (e.g. by a DELETE endpoint).
- */
+/** Throws PipelineCancelledError if the ref was deleted mid-run. */
 async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
   const refRepo = new RepoRefRepository(db);
   const rows = await refRepo.findAll(eq(repoRefs.id, repoRefId));
@@ -430,17 +516,7 @@ async function assertRefExists(db: Db, repoRefId: number): Promise<void> {
   }
 }
 
-/**
- * Run the indexing pipeline for a single ref.
- *
- * Flow:
- * 1. Filter files (gitignore, language support)
- * 2. For each batch of files: read → hash → dedup or parse → chunk → store
- *    (each batch runs in its own short transaction to avoid long-held locks)
- * 3. Embed all new chunks (outside transaction — can be slow)
- * 4. Update ref status to "ready" with language stats (only after embeddings are persisted)
- * @return all indexed files
- */
+/** Returns the set of files that reached persistence. */
 export async function runPipeline(
   opts: PipelineOptions,
   input: PipelineInput,
@@ -450,6 +526,7 @@ export async function runPipeline(
     db,
     embedder,
     embeddingBatchSize = 64,
+    embeddingConcurrency = 1,
     maxTokensPerChunk,
     maxFileSize = DEFAULT_MAX_FILE_SIZE,
     maxAvgLineLength = DEFAULT_MAX_AVG_LINE_LENGTH,
@@ -460,60 +537,74 @@ export async function runPipeline(
   const filePaths = filesToProcess.map((f) => f.path);
   const newChunkRows: NewChunkRow[] = [];
   let processed = 0;
+  let totalFilesNew = 0;
+  let totalFilesReused = 0;
+  let totalChunksNew = 0;
+  let totalChunksRepair = 0;
 
-  // Process files in small batches — each batch gets its own short
-  // transaction so locks are released quickly between batches.
+  // Small batches so transactions stay short and locks aren't held while we parse/chunk.
   for (let i = 0; i < filesToProcess.length; i += FILE_BATCH_SIZE) {
-    // Between batches, verify the ref wasn't deleted (e.g. by DELETE endpoint).
     if (i > 0) await assertRefExists(db, repoRefId);
 
     const batch = filesToProcess.slice(i, i + FILE_BATCH_SIZE);
 
-    await db.transaction(async (tx) => {
-      const repos = createTxRepos(tx);
-      for (const file of batch) {
-        try {
-          const result = await processFile(repos, {
-            worktreePath,
-            file,
-            repoRefId,
-            maxTokens: maxTokensPerChunk,
-            maxFileSize,
-            maxAvgLineLength,
-          });
-          if (result.skipped) {
-            onProgress?.({
-              type: "file-skipped",
-              path: result.skipped.path,
-              reason: result.skipped.reason,
-            });
-          }
-          newChunkRows.push(...result.chunks);
-        } catch (err) {
-          if (err instanceof PipelineCancelledError) throw err;
-          // Per-file error handling: log and continue with remaining files
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          onProgress?.({ type: "file-error", path: file.path, error: errorMsg });
-        }
-        processed++;
-        onProgress?.({
-          type: "file-done",
-          path: file.path,
-          filesProcessed: processed,
-          filesTotal: filesToProcess.length,
-        });
+    const outcomes = await Promise.all(
+      batch.map((file) =>
+        prepareFile(worktreePath, file, maxFileSize, maxAvgLineLength, maxTokensPerChunk),
+      ),
+    );
+
+    const prepared: PreparedFile[] = [];
+    for (const o of outcomes) {
+      if (o.kind === "prepared") prepared.push(o.prepared);
+      else if (o.kind === "skipped") {
+        onProgress?.({ type: "file-skipped", path: o.path, reason: o.reason });
+      } else {
+        onProgress?.({ type: "file-error", path: o.path, error: o.error });
       }
+    }
+
+    const batchResult = await db.transaction(async (tx) => {
+      const repos = createTxRepos(tx);
+      return persistBatch(repos, prepared, repoRefId);
     });
+    newChunkRows.push(...batchResult.chunks);
+    totalFilesNew += batchResult.filesNew;
+    totalFilesReused += batchResult.filesReused;
+    totalChunksNew += batchResult.chunksNew;
+    totalChunksRepair += batchResult.chunksRepair;
+
+    for (const file of batch) {
+      processed++;
+      onProgress?.({
+        type: "file-done",
+        path: file.path,
+        filesProcessed: processed,
+        filesTotal: filesToProcess.length,
+      });
+    }
   }
 
   // Bail out early if the ref was deleted before embedding.
   await assertRefExists(db, repoRefId);
 
+  onProgress?.({
+    type: "dedup-summary",
+    filesNew: totalFilesNew,
+    filesReused: totalFilesReused,
+    chunksNew: totalChunksNew,
+    chunksRepair: totalChunksRepair,
+  });
+
+  const chunkRepo = new ChunkRepository(db);
+  const toEmbed = await applyChunkEmbeddingCache(chunkRepo, newChunkRows, onProgress);
+
   await embedNewChunks({
     embedder,
-    chunkRepo: new ChunkRepository(db),
-    newChunkRows,
+    chunkRepo,
+    newChunkRows: toEmbed,
     batchSize: embeddingBatchSize,
+    concurrency: embeddingConcurrency,
     onProgress,
     repoRefId,
     db,

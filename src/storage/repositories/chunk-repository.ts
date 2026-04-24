@@ -55,6 +55,19 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
   }
 
   /**
+   * Find chunks without embeddings across a set of file_contents in one query.
+   * Used by the pipeline to resurrect chunks from a previous crashed run.
+   */
+  async findUnembeddedByFileContentIds(
+    fileContentIds: number[],
+  ): Promise<(typeof chunks.$inferSelect)[]> {
+    if (fileContentIds.length === 0) return [];
+    return this.findAll(
+      and(inArray(chunks.fileContentId, fileContentIds), isNull(chunks.embedding))!,
+    );
+  }
+
+  /**
    * Find all chunks that have a non-null `embeddingError` for a given
    * file content. Useful for diagnostics / the admin dashboard.
    */
@@ -107,6 +120,43 @@ export class ChunkRepository extends FileContentBaseRepository<typeof chunks> {
       }
     }
 
+    return result;
+  }
+
+  /**
+   * Look up one embedding per unique `content_sha256` for cache reuse.
+   *
+   * Given a list of chunk-content hashes, returns `{hash → embedding}` for
+   * hashes that already have an embedded chunk anywhere in the DB. The
+   * partial index `idx_chunks_content_sha256` is filtered by
+   * `embedding IS NOT NULL`, so this is a fast index-only scan.
+   *
+   * Used by the pipeline to skip re-embedding byte-identical chunks — the
+   * common case when a file's file-level sha changes but most of its
+   * chunks (e.g. individual functions) are unchanged.
+   */
+  async findEmbeddingsByContentSha256(hashes: string[]): Promise<Map<string, number[]>> {
+    if (hashes.length === 0) return new Map();
+    const unique = [...new Set(hashes)];
+
+    // DISTINCT ON keeps one row per hash at the DB level — without it, a hot
+    // hash with thousands of chunks would stream thousands of 768-d vectors
+    // into memory just so we could drop all but the first.
+    const rows = await this.db
+      .selectDistinctOn([chunks.contentSha256], {
+        contentSha256: chunks.contentSha256,
+        embedding: chunks.embedding,
+      })
+      .from(chunks)
+      .where(and(inArray(chunks.contentSha256, unique), isNotNull(chunks.embedding)))
+      .orderBy(chunks.contentSha256, chunks.id);
+
+    const result = new Map<string, number[]>();
+    for (const row of rows) {
+      if (row.contentSha256 && row.embedding) {
+        result.set(row.contentSha256, row.embedding);
+      }
+    }
     return result;
   }
 }
